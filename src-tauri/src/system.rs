@@ -41,6 +41,7 @@ mod imp {
                 Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED},
                 LibraryLoader::{GetProcAddress, LoadLibraryW},
                 Power::{GetSystemPowerStatus, SYSTEM_POWER_STATUS},
+                Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD},
                 Shutdown::LockWorkStation,
             },
             UI::WindowsAndMessaging::{
@@ -133,12 +134,21 @@ mod imp {
     const PERSONALIZE: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     fn is_dark() -> bool {
-        Command::new("reg")
-            .args(["query", PERSONALIZE, "/v", "AppsUseLightTheme"])
-            .creation_flags(NO_WINDOW)
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).contains("0x0"))
-            .unwrap_or(false)
+        // A direct registry read: spawning reg.exe on every status poll would be wasteful.
+        let mut data = 0u32;
+        let mut size = std::mem::size_of::<u32>() as u32;
+        let err = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                w!(r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"),
+                w!("AppsUseLightTheme"),
+                RRF_RT_REG_DWORD,
+                None,
+                Some(&mut data as *mut u32 as *mut _),
+                Some(&mut size),
+            )
+        };
+        err.is_ok() && data == 0
     }
 
     fn set_dark(dark: bool) -> bool {

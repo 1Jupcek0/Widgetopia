@@ -114,6 +114,27 @@
       </div>
     </section>
 
+    <!-- Agents: what the herdr agents are doing (click to open) -->
+    <section class="widget glass herdr" id="herdr" data-id="herdr" data-title="Agents (herdr)" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="hd-head"><b>Agents</b><span id="hd-count"></span></div>
+        <div class="hd-list" id="hd-list"></div>
+        <div class="hd-empty" id="hd-empty"></div>
+      </div>
+    </section>
+
+    <!-- Claude usage: limits and token statistics -->
+    <section class="widget glass claude" id="claude" data-id="claude" data-title="Claude usage" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="cl-head"><b>Claude</b><span id="cl-updated"></span></div>
+        <div class="cl-limits" id="cl-limits"></div>
+        <div class="cl-today" id="cl-today"></div>
+        <div class="cl-chart" id="cl-chart"></div>
+      </div>
+    </section>
+
     <!-- Settings panel (opened from the right-click menu or the tray) -->
     <section class="widget glass hidden" id="settings" data-id="settings" data-interactive>
       <div class="glass-clip"><div class="glass-bg"></div></div>
@@ -146,7 +167,16 @@
           </label>
           <p class="hint">
             Off: widgets stay in the background. On: a click raises them above windows and the glass blurs those
-            windows too.
+            windows too. <b class="warn">Heavy on performance</b> while windows are behind a widget (live screen
+            capture); widgets are hidden from screenshots.
+          </p>
+          <label class="row switch-row">
+            <span>Glass sees desktop icons</span>
+            <input type="checkbox" id="icons-toggle" class="switch" />
+          </label>
+          <p class="hint">
+            The glass also refracts the icons on the desktop. <b class="warn">Hardcore on performance</b>: needs a
+            continuous screen capture even when nothing moves. Leave it off unless you really want it.
           </p>
         </div>
         <div class="btn-row">
@@ -164,5 +194,7 @@
     <script src="panels/weather.js"></script>
     <script src="panels/media.js"></script>
     <script src="panels/system.js"></script>
+    <script src="panels/herdr.js"></script>
+    <script src="panels/claude.js"></script>
   </body>
 </html>

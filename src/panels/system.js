@@ -10,8 +10,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const card = $("system");
-  const POLL_MS = 4000;
-  const BRIGHTNESS_POLL_MS = 30000;
+  const POLL_MS = 5000;
+  // Reading brightness goes through PowerShell/WMI, so do it rarely (and after our own changes).
+  const BRIGHTNESS_POLL_MS = 5 * 60 * 1000;
 
   // 24x24 line icons (stroke = currentColor); `fill` class paths are solid.
   const ICONS = {
@@ -33,6 +34,7 @@
   };
 
   let status = null; // last sys_status
+  let lastKey = ""; // serialised status + options of the last render
   let brightness = null; // 0..100 or null (no laptop display)
   let busy = false; // a slider is being dragged: don't overwrite it
   let pollTimer = 0;
@@ -222,9 +224,13 @@
 
   /* --- refresh loop --------------------------------------------------- */
 
-  function render() {
+  function render(force = false) {
     if (!status) return;
     const o = opts();
+    // Rebuilding the tiles repaints the glass: skip it when nothing changed.
+    const key = JSON.stringify([status, o, brightness]);
+    if (!force && key === lastKey) return;
+    lastKey = key;
     renderTiles(o, status);
     renderPower(o, status);
     renderSliders(o, status);

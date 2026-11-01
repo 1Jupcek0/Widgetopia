@@ -2,13 +2,15 @@ use std::{
     path::PathBuf,
     process::Command,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Mutex,
     },
     thread,
     time::Duration,
 };
 
+mod claude;
+mod herdr;
 mod media;
 mod system;
 
@@ -34,9 +36,44 @@ struct Rect {
 #[derive(Default)]
 struct HitRegions(Mutex<Vec<Rect>>);
 
+/// Bumped whenever the regions change, so the hit-test loop only copies them when needed.
+static REGIONS_VERSION: AtomicU64 = AtomicU64::new(0);
+
 #[tauri::command]
 fn set_hit_regions(state: tauri::State<HitRegions>, rects: Vec<Rect>) {
     *state.0.lock().unwrap() = rects;
+    REGIONS_VERSION.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Cursor position in CSS pixels relative to the overlay.
+/// Uses plain Win32 calls: going through the Tauri window API means a round trip to the
+/// UI thread for every call, which is wasteful at 30 Hz.
+#[cfg(windows)]
+fn cursor_css(win: &tauri::WebviewWindow) -> Option<(f64, f64)> {
+    use windows::Win32::{
+        Foundation::POINT,
+        Graphics::Gdi::ClientToScreen,
+        UI::{HiDpi::GetDpiForWindow, WindowsAndMessaging::GetCursorPos},
+    };
+    let hwnd = win.hwnd().ok()?;
+    unsafe {
+        let mut cursor = POINT::default();
+        GetCursorPos(&mut cursor).ok()?;
+        let mut origin = POINT { x: 0, y: 0 };
+        if !ClientToScreen(hwnd, &mut origin).as_bool() {
+            return None;
+        }
+        let scale = GetDpiForWindow(hwnd).max(96) as f64 / 96.0;
+        Some(((cursor.x - origin.x) as f64 / scale, (cursor.y - origin.y) as f64 / scale))
+    }
+}
+
+#[cfg(not(windows))]
+fn cursor_css(win: &tauri::WebviewWindow) -> Option<(f64, f64)> {
+    let cur = win.cursor_position().ok()?;
+    let origin = win.inner_position().ok()?;
+    let scale = win.scale_factor().unwrap_or(1.0);
+    Some(((cur.x - origin.x as f64) / scale, (cur.y - origin.y as f64) / scale))
 }
 
 /// Returns the raw bytes of the current desktop wallpaper.
@@ -149,7 +186,6 @@ fn raise_overlay(win: tauri::WebviewWindow) {
 #[tauri::command]
 fn set_front_mode(win: tauri::WebviewWindow, enabled: bool) {
     FRONT_MODE.store(enabled, Ordering::Relaxed);
-    let _ = win.set_content_protected(enabled);
     if !enabled {
         sink_overlay(&win);
     }
@@ -166,7 +202,17 @@ fn set_typing(win: tauri::WebviewWindow, on: bool) {
     }
 }
 
+/// Hash of the last captured frame per region (see `capture_region`).
+static LAST_FRAMES: std::sync::LazyLock<Mutex<std::collections::HashMap<i64, u64>>> =
+    std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
+
 static FRONT_MODE: AtomicBool = AtomicBool::new(false);
+
+/// Hides the overlay from screen capture (needed whenever the glass captures what is behind it).
+#[tauri::command]
+fn set_capture_protected(win: tauri::WebviewWindow, on: bool) {
+    let _ = win.set_content_protected(on);
+}
 
 /// Puts the overlay at the bottom of the z-order (which is right above the desktop it is owned by).
 fn sink_overlay(win: &tauri::WebviewWindow) {
@@ -272,6 +318,18 @@ fn capture_region(win: tauri::WebviewWindow, x: f64, y: f64, w: f64, h: f64, sca
         let _ = DeleteObject(bmp.into());
         let _ = DeleteDC(mem);
         ReleaseDC(None, screen);
+        // Unchanged since the last frame for this region? Then send nothing: the frontend
+        // keeps the previous picture and does not have to redraw the glass filter.
+        let key = ((sx as i64) << 48) ^ ((sy as i64) << 32) ^ ((sw as i64) << 16) ^ sh as i64;
+        let hash = out[8..].chunks_exact(8).fold(0xcbf2_9ce4_8422_2325u64, |h, c| {
+            (h ^ u64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]])).wrapping_mul(0x0000_0100_0000_01b3)
+        });
+        {
+            let mut seen = LAST_FRAMES.lock().unwrap();
+            if seen.insert(key, hash) == Some(hash) {
+                return Ok(Response::new(Vec::<u8>::new()));
+            }
+        }
         for px in out[8..].chunks_exact_mut(4) {
             px.swap(0, 2); // BGRA -> RGBA
             px[3] = 255;
@@ -294,6 +352,7 @@ pub fn run() {
             quit_app,
             raise_overlay,
             set_front_mode,
+            set_capture_protected,
             set_typing,
             overlay_above_windows,
             capture_region,
@@ -304,7 +363,10 @@ pub fn run() {
             media::media_watch,
             system::sys_status,
             system::sys_set,
-            system::sys_brightness
+            system::sys_brightness,
+            herdr::herdr_agents,
+            herdr::herdr_open,
+            claude::claude_stats
         ])
         .setup(|app| {
             let win = app.get_webview_window("main").expect("main window missing");
@@ -356,6 +418,9 @@ pub fn run() {
             thread::spawn(move || {
                 let mut ignoring = true;
                 let mut tick = 0u32;
+                let mut regions: Vec<Rect> = Vec::new();
+                let mut seen_version = u64::MAX;
+                let mut last_cursor = (f64::NAN, f64::NAN);
                 loop {
                     thread::sleep(Duration::from_millis(33));
                     tick = tick.wrapping_add(1);
@@ -364,17 +429,19 @@ pub fn run() {
                     if tick % 9 == 0 && !FRONT_MODE.load(Ordering::Relaxed) && above_windows(&w) {
                         sink_overlay(&w);
                     }
-                    let (Ok(cur), Ok(origin)) = (w.cursor_position(), w.inner_position()) else {
+                    let Some((x, y)) = cursor_css(&w) else {
                         continue;
                     };
-                    let scale = w.scale_factor().unwrap_or(1.0);
-                    let x = (cur.x - origin.x as f64) / scale;
-                    let y = (cur.y - origin.y as f64) / scale;
-                    let hit = handle
-                        .state::<HitRegions>()
-                        .0
-                        .lock()
-                        .unwrap()
+                    let version = REGIONS_VERSION.load(Ordering::Relaxed);
+                    if version == seen_version && (x, y) == last_cursor {
+                        continue; // nothing moved, nothing changed
+                    }
+                    last_cursor = (x, y);
+                    if version != seen_version {
+                        seen_version = version;
+                        regions = handle.state::<HitRegions>().0.lock().unwrap().clone();
+                    }
+                    let hit = regions
                         .iter()
                         .any(|r| x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
                     if hit == ignoring {

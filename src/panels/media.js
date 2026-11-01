@@ -261,7 +261,8 @@
     const pos = dur > 0 ? Math.min(position(sel), dur) : position(sel);
     $("m-pos").textContent = fmt(pos);
     $("m-dur").textContent = dur > 0 ? fmt(dur) : "";
-    $("m-fill").style.width = dur > 0 ? `${(pos / dur) * 100}%` : "0%";
+    // transform instead of width: no layout/paint, the compositor handles it
+    $("m-fill").style.transform = `scaleX(${dur > 0 ? pos / dur : 0})`;
     if (card.classList.contains("lyrics-on")) showLyric(sel, pos);
   }
 
@@ -306,7 +307,7 @@
     invoke("media_watch", { on }).catch(() => {});
     clearInterval(ticker);
     if (on) {
-      ticker = setInterval(tick, 500);
+      ticker = setInterval(tick, 1000);
       invoke("media_snapshot").then(update).catch(() => {});
     }
   }

@@ -779,18 +779,33 @@ function applyEnabled() {
 /* ------------------------------------------------------------------ */
 
 const frontToggle = document.getElementById("front-toggle");
-const CAPTURE_SCALE = 0.5; // the backdrop is blurred anyway, half resolution is plenty
-const CAPTURE_INTERVAL = 66; // ~15 fps, only while windows are actually behind the widgets
+const CAPTURE_SCALE = 0.35; // the backdrop is blurred anyway, a third of the resolution is plenty
+const CAPTURE_INTERVAL = 100; // ~10 fps while something changes
+const CAPTURE_IDLE_INTERVAL = 400; // when nothing behind the widgets changes
 let live = false;
+
+const iconsToggle = document.getElementById("icons-toggle");
+
+/** Applies front mode + the icons option on the backend (the capture needs the overlay hidden from it). */
+function applyCaptureSettings() {
+  invoke("set_front_mode", { enabled: state.front }).catch(() => {});
+  invoke("set_capture_protected", { on: state.front || !!state.glass.icons }).catch(() => {});
+  if (!state.front && !state.glass.icons) setLive(false);
+  else pollAbove();
+}
 
 function setFront(enabled) {
   state.front = enabled;
   frontToggle.checked = enabled;
   saveState();
-  invoke("set_front_mode", { enabled }).catch(() => {});
-  if (!enabled) setLive(false);
-  else pollAbove();
+  applyCaptureSettings();
 }
+
+iconsToggle.addEventListener("change", () => {
+  state.glass.icons = iconsToggle.checked;
+  saveState();
+  applyCaptureSettings();
+});
 
 function setLive(on) {
   if (on === live) return;
@@ -800,9 +815,10 @@ function setLive(on) {
 }
 
 async function pollAbove() {
-  if (!state.front) return;
+  if (!state.front && !state.glass.icons) return;
   try {
-    setLive(await invoke("overlay_above_windows"));
+    // Desktop icons live on the desktop itself, so with that option capturing never stops.
+    setLive(state.glass.icons || (await invoke("overlay_above_windows")));
   } catch {
     /* ignore */
   }
@@ -821,9 +837,10 @@ async function captureGlass(el) {
   const y0 = Math.max(0, Y);
   const x1 = Math.min(window.innerWidth, X + W);
   const y1 = Math.min(window.innerHeight, Y + H);
-  if (x1 - x0 < 2 || y1 - y0 < 2) return;
+  if (x1 - x0 < 2 || y1 - y0 < 2) return false;
 
   const buf = await invoke("capture_region", { x: x0, y: y0, w: x1 - x0, h: y1 - y0, scale: CAPTURE_SCALE });
+  if (buf.byteLength === 0) return false; // identical to the previous frame
   const dv = new DataView(buf);
   const w = dv.getUint32(0, true);
   const h = dv.getUint32(4, true);
@@ -853,19 +870,21 @@ async function captureGlass(el) {
   if (dx + w < cw) g.drawImage(canvas, dx + w - 1, dy, 1, h, dx + w, dy, cw - dx - w, h); // right
   if (dy > 0) g.drawImage(canvas, 0, dy, cw, 1, 0, 0, cw, dy); // top
   if (dy + h < ch) g.drawImage(canvas, 0, dy + h - 1, cw, 1, 0, dy + h, cw, ch - dy - h); // bottom
+  return true;
 }
 
 async function captureLoop() {
   while (live) {
     const t0 = performance.now();
+    let changed = false;
     for (const el of document.querySelectorAll(".glass:not(.hidden):not(.off)")) {
       try {
-        await captureGlass(el);
+        changed = (await captureGlass(el)) || changed;
       } catch {
         /* skip frame */
       }
     }
-    const wait = CAPTURE_INTERVAL - (performance.now() - t0);
+    const wait = (changed ? CAPTURE_INTERVAL : CAPTURE_IDLE_INTERVAL) - (performance.now() - t0);
     await new Promise((res) => setTimeout(res, Math.max(0, wait)));
   }
 }
@@ -880,7 +899,8 @@ setInterval(pollAbove, 600);
 async function boot() {
   lockToggle.checked = state.locked;
   frontToggle.checked = state.front;
-  invoke("set_front_mode", { enabled: state.front }).catch(() => {});
+  iconsToggle.checked = !!state.glass.icons;
+  applyCaptureSettings();
 
   buildPanelList();
   const layoutList = document.getElementById("layout-list");
