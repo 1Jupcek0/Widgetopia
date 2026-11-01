@@ -17,6 +17,8 @@ window per widget.
 - Optional "Bring to front on click" mode (Settings): a click raises the widgets above windows and the glass blurs/refracts those windows too (live screen capture, ~15 fps, only while a window is behind a widget)
 - Media panel (Spotify, browsers, any app using Windows media controls): title/artist/album, cover art, progress with seeking, play/pause/next/previous, source priority, per-source artwork switches and optional synced lyrics (fetched from [LRCLIB](https://lrclib.net); sends artist/title, off by default)
 - Every panel has its own options, available in its right-click menu and under Settings -> Panels
+- Quick settings panel: Wi-Fi, Bluetooth, airplane mode, power mode, volume, microphone mute, brightness, dark mode, battery, lock; every tile is optional
+- Layout tools (Settings -> Layout): grid overlay, snap to grid / screen centre / edges / other panels with alignment guides, proportional resizing with a corner grip (double-click resets), optionally allowed while locked
 - Settings lists every panel with an on/off switch
 - Right click on a widget: *Reload*, *Settings*, *Lock / Unlock* (the tray icon has the same Reload / Settings). Settings holds everything else (glass blur/refraction, quit)
 
@@ -46,8 +48,9 @@ npm run build
 | Overlay window, tray, click-through hit-testing, wallpaper access | `src-tauri/src/lib.rs` |
 | Window flags (transparent, no decorations, always on bottom) | `src-tauri/tauri.conf.json` |
 | Core: dragging, lock, menu, settings, glass effect | `src/app.js` |
-| Panels (clock, weather, media) | `src/panels/` |
+| Panels (clock, weather, media, quick settings) | `src/panels/` |
 | Media sessions (Windows media controls) | `src-tauri/src/media.rs` |
+| Wi-Fi, Bluetooth, power mode, audio, ... | `src-tauri/src/system.rs` |
 
 ### Why the glass looks the way it does
 

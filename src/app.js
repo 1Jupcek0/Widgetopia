@@ -13,11 +13,13 @@ const { listen } = window.__TAURI__.event;
 const STORAGE_KEY = "widgetopia.state.v1";
 const DEFAULT_POSITIONS = {
   clock: { x: 60, y: 50 },
-  glass: { x: 70, y: 240 },
-  weather: { x: 70, y: 470 },
-  media: { x: 70, y: 770 },
-  settings: { x: 480, y: 60 },
+  weather: { x: 70, y: 240 },
+  media: { x: 70, y: 540 },
+  system: { x: 500, y: 240 },
+  settings: { x: 900, y: 60 },
 };
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 2.5;
 const DEFAULT_GLASS = { blur: 4, refraction: 36 };
 const GLASS_PAD = 48; // keep in sync with --glass-pad in style.css
 
@@ -67,6 +69,7 @@ function loadState() {
   const fresh = {
     locked: false,
     positions: {},
+    scales: {},
     glass: { ...DEFAULT_GLASS },
     front: false,
     enabled: {},
@@ -81,6 +84,7 @@ function loadState() {
         ...fresh,
         locked: !!raw.locked,
         positions: raw.positions || {},
+        scales: raw.scales || {},
         glass: { ...DEFAULT_GLASS, ...(raw.glass || {}) },
         front: !!raw.front,
         enabled: raw.enabled || {},
@@ -112,9 +116,18 @@ function saveState() {
 /* Positioning                                                        */
 /* ------------------------------------------------------------------ */
 
+const scaleOf = (el) => el._scale || 1;
+const sizeOf = (el) => ({ w: el.offsetWidth * scaleOf(el), h: el.offsetHeight * scaleOf(el) });
+
+function setScale(el, s) {
+  el._scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
+  el.style.setProperty("--s", el._scale);
+}
+
 function setPosition(el, x, y) {
-  const maxX = Math.max(0, window.innerWidth - el.offsetWidth);
-  const maxY = Math.max(0, window.innerHeight - el.offsetHeight);
+  const { w, h } = sizeOf(el);
+  const maxX = Math.max(0, window.innerWidth - w);
+  const maxY = Math.max(0, window.innerHeight - h);
   x = Math.min(Math.max(0, x), maxX);
   y = Math.min(Math.max(0, y), maxY);
   el.style.setProperty("--wx", `${x}px`);
@@ -124,6 +137,7 @@ function setPosition(el, x, y) {
 
 function restorePositions() {
   for (const el of widgets) {
+    setScale(el, state.scales[el.dataset.id] || 1);
     const p = state.positions[el.dataset.id] || DEFAULT_POSITIONS[el.dataset.id] || { x: 100, y: 100 };
     setPosition(el, p.x, p.y);
   }
@@ -159,6 +173,69 @@ function updateHitRegions() {
 
 const NO_DRAG = "input, button, textarea, select, a, li, [data-nodrag]";
 const DRAG_THRESHOLD = 4; // px: below this a press is a click, not a drag
+const SNAP_DISTANCE = 10; // px
+
+const guideV = document.getElementById("guide-v");
+const guideH = document.getElementById("guide-h");
+
+function showGuides(v, h) {
+  guideV.style.display = v === null ? "none" : "block";
+  guideH.style.display = h === null ? "none" : "block";
+  if (v !== null) {
+    guideV.style.left = `${v}px`;
+    guideV.classList.toggle("center", Math.abs(v - window.innerWidth / 2) < 1);
+  }
+  if (h !== null) {
+    guideH.style.top = `${h}px`;
+    guideH.classList.toggle("center", Math.abs(h - window.innerHeight / 2) < 1);
+  }
+}
+
+/** Snaps a proposed top-left position to the grid, the screen centre/edges and other widgets. */
+function snapPosition(el, x, y) {
+  const { w, h } = sizeOf(el);
+  let guideX = null;
+  let guideY = null;
+
+  if (opt("layout", "snapGrid")) {
+    const g = Number(opt("layout", "gridSize"));
+    x = Math.round(x / g) * g;
+    y = Math.round(y / g) * g;
+  }
+  if (opt("layout", "snapGuides")) {
+    const xs = [0, window.innerWidth / 2, window.innerWidth];
+    const ys = [0, window.innerHeight / 2, window.innerHeight];
+    for (const other of widgets) {
+      if (other === el || other.classList.contains("hidden") || other.classList.contains("off")) continue;
+      const o = sizeOf(other);
+      const p = other._pos;
+      xs.push(p.x, p.x + o.w / 2, p.x + o.w);
+      ys.push(p.y, p.y + o.h / 2, p.y + o.h);
+    }
+    const fit = (start, size, targets) => {
+      let best = null;
+      for (const edge of [start, start + size / 2, start + size]) {
+        for (const t of targets) {
+          const d = t - edge;
+          if (Math.abs(d) <= SNAP_DISTANCE && (best === null || Math.abs(d) < Math.abs(best.d))) best = { d, line: t };
+        }
+      }
+      return best;
+    };
+    const bx = fit(x, w, xs);
+    const by = fit(y, h, ys);
+    if (bx) {
+      x += bx.d;
+      guideX = bx.line;
+    }
+    if (by) {
+      y += by.d;
+      guideY = by.line;
+    }
+  }
+  showGuides(guideX, guideY);
+  return { x, y };
+}
 
 for (const el of widgets) {
   el.addEventListener("pointerdown", () => {
@@ -180,7 +257,8 @@ for (const el of widgets) {
         dragging = true;
         updateHitRegions();
       }
-      setPosition(el, start.x + ev.clientX - start.px, start.y + ev.clientY - start.py);
+      const p = snapPosition(el, start.x + ev.clientX - start.px, start.y + ev.clientY - start.py);
+      setPosition(el, p.x, p.y);
     };
     const onUp = () => {
       el.removeEventListener("pointermove", onMove);
@@ -189,6 +267,7 @@ for (const el of widgets) {
       if (!active) return;
       el.classList.remove("dragging");
       dragging = false;
+      showGuides(null, null);
       state.positions[el.dataset.id] = { ...el._pos };
       saveState();
       updateHitRegions();
@@ -197,18 +276,98 @@ for (const el of widgets) {
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
   });
+
+  // Resize grip in the bottom-right corner: scales the whole panel proportionally.
+  const grip = document.createElement("div");
+  grip.className = "resize-grip";
+  grip.setAttribute("data-nodrag", "");
+  el.appendChild(grip);
+  grip.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const base = { w: el.offsetWidth, sw: sizeOf(el).w, px: e.clientX };
+    grip.setPointerCapture(e.pointerId);
+    el.classList.add("resizing");
+    dragging = true;
+    updateHitRegions();
+    const onMove = (ev) => {
+      let width = base.sw + (ev.clientX - base.px);
+      if (opt("layout", "snapGrid")) {
+        const g = Number(opt("layout", "gridSize"));
+        width = Math.round((el._pos.x + width) / g) * g - el._pos.x;
+      }
+      setScale(el, width / base.w);
+      setPosition(el, el._pos.x, el._pos.y);
+    };
+    const onUp = () => {
+      grip.removeEventListener("pointermove", onMove);
+      grip.removeEventListener("pointerup", onUp);
+      grip.removeEventListener("pointercancel", onUp);
+      el.classList.remove("resizing");
+      dragging = false;
+      state.scales[el.dataset.id] = el._scale;
+      state.positions[el.dataset.id] = { ...el._pos };
+      saveState();
+      updateHitRegions();
+    };
+    grip.addEventListener("pointermove", onMove);
+    grip.addEventListener("pointerup", onUp);
+    grip.addEventListener("pointercancel", onUp);
+  });
+  grip.addEventListener("dblclick", () => {
+    setScale(el, 1);
+    delete state.scales[el.dataset.id];
+    saveState();
+    updateHitRegions();
+  });
 }
 
 const lockToggle = document.getElementById("lock-toggle");
 
+/** Body classes that drive the grid overlay, drag cursor and resize grips. */
+function applyLayout() {
+  const gridSize = Number(opt("layout", "gridSize"));
+  document.documentElement.style.setProperty("--grid", `${gridSize}px`);
+  document.body.classList.toggle("locked", state.locked);
+  document.body.classList.toggle("unlocked", !state.locked);
+  document.body.classList.toggle("show-grid", !state.locked && !!opt("layout", "grid"));
+  document.body.classList.toggle(
+    "can-resize",
+    !!opt("layout", "resize") && (!state.locked || !!opt("layout", "resizeLocked"))
+  );
+}
+
 function setLocked(locked) {
   state.locked = locked;
-  document.body.classList.toggle("locked", locked);
-  document.body.classList.toggle("unlocked", !locked);
   lockToggle.checked = locked;
+  applyLayout();
   saveState();
   updateHitRegions();
 }
+
+registerPanel("layout", {
+  options: [
+    { key: "grid", label: "Show grid (unlocked)", type: "toggle", def: false },
+    { key: "snapGrid", label: "Snap to grid", type: "toggle", def: false },
+    { key: "snapGuides", label: "Snap to centre & edges", type: "toggle", def: true },
+    {
+      key: "gridSize",
+      label: "Grid size",
+      type: "choice",
+      def: "20",
+      choices: [
+        ["10", "10 px"],
+        ["20", "20 px"],
+        ["40", "40 px"],
+        ["80", "80 px"],
+      ],
+    },
+    { key: "resize", label: "Allow resizing", type: "toggle", def: true },
+    { key: "resizeLocked", label: "Resize while locked", type: "toggle", def: false },
+  ],
+  onOption: applyLayout,
+});
 
 lockToggle.addEventListener("change", () => setLocked(lockToggle.checked));
 
@@ -392,6 +551,23 @@ function buildDisplacementMap(w, h, radius, bezel, pad) {
 
 const glassFilters = [];
 
+/** Rebuilds the refraction map when a glass panel changes size (content or options changed). */
+function rebuildGlassMap(g) {
+  const w = el_w(g.el);
+  const h = g.el.offsetHeight;
+  if (w === g.w && h === g.h) return;
+  g.w = w;
+  g.h = h;
+  const radius = parseFloat(getComputedStyle(g.el).borderTopLeftRadius) || 32;
+  const total = { w: w + GLASS_PAD * 2, h: h + GLASS_PAD * 2 };
+  g.filter.setAttribute("width", total.w);
+  g.filter.setAttribute("height", total.h);
+  g.image.setAttribute("width", total.w);
+  g.image.setAttribute("height", total.h);
+  g.image.setAttribute("href", buildDisplacementMap(w, h, radius, Math.min(radius + 8, 44), GLASS_PAD));
+}
+const el_w = (el) => el.offsetWidth;
+
 function setupGlass(el) {
   const w = el.offsetWidth;
   const h = el.offsetHeight;
@@ -413,10 +589,21 @@ function setupGlass(el) {
   );
   el.querySelector(".glass-bg").style.filter = `url(#${id})`;
 
-  glassFilters.push({
+  const entry = {
+    el,
+    w,
+    h,
+    filter: svg.querySelector(`#${id}`),
+    image: svg.querySelector(`#${id} feImage`),
     blur: svg.querySelector(`#${id} feGaussianBlur`),
     disp: svg.querySelector(`#${id} feDisplacementMap`),
-  });
+  };
+  glassFilters.push(entry);
+  let pending = 0;
+  new ResizeObserver(() => {
+    cancelAnimationFrame(pending);
+    pending = requestAnimationFrame(() => rebuildGlassMap(entry));
+  }).observe(el);
 }
 
 function applyGlassSettings() {
@@ -625,10 +812,11 @@ async function captureGlass(el) {
   const r = el.getBoundingClientRect();
   // The backdrop area is the card plus GLASS_PAD on every side; clamp it to the screen and
   // extend the screen edges into the missing margin (no dark/light stripe at screen edges).
-  const X = r.left - GLASS_PAD;
-  const Y = r.top - GLASS_PAD;
-  const W = r.width + GLASS_PAD * 2;
-  const H = r.height + GLASS_PAD * 2;
+  const pad = GLASS_PAD * scaleOf(el);
+  const X = r.left - pad;
+  const Y = r.top - pad;
+  const W = r.width + pad * 2;
+  const H = r.height + pad * 2;
   const x0 = Math.max(0, X);
   const y0 = Math.max(0, Y);
   const x1 = Math.min(window.innerWidth, X + W);
@@ -686,24 +874,18 @@ frontToggle.addEventListener("change", () => setFront(frontToggle.checked));
 setInterval(pollAbove, 600);
 
 /* ------------------------------------------------------------------ */
-/* Demo card + boot                                                   */
+/* Boot                                                               */
 /* ------------------------------------------------------------------ */
 
-let clicks = 0;
-const clickBtn = document.getElementById("click-demo");
-clickBtn.addEventListener("click", () => {
-  clicks += 1;
-  clickBtn.textContent = `Clicked ${clicks} time${clicks === 1 ? "" : "s"}`;
-});
-
 async function boot() {
-  document.body.classList.toggle("locked", state.locked);
-  document.body.classList.toggle("unlocked", !state.locked);
   lockToggle.checked = state.locked;
   frontToggle.checked = state.front;
   invoke("set_front_mode", { enabled: state.front }).catch(() => {});
 
   buildPanelList();
+  const layoutList = document.getElementById("layout-list");
+  for (const o of PANELS.layout.options) layoutList.appendChild(optionRow("layout", o));
+  applyLayout();
   for (const panel of Object.values(PANELS)) panel.init?.();
 
   await loadWallpaper();

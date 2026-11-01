@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body class="unlocked">
+    <!-- Grid + alignment guides (shown while editing the layout) -->
+    <div id="grid" aria-hidden="true"></div>
+    <div class="guide v" id="guide-v" aria-hidden="true"></div>
+    <div class="guide h" id="guide-h" aria-hidden="true"></div>
+
     <!-- SVG filters for the glass widgets are created here by app.js -->
     <svg id="filters" width="0" height="0" style="position: absolute" aria-hidden="true"></svg>
 
@@ -16,16 +21,6 @@
         <span class="hm" id="clock-hm">00:00</span><span class="sec" id="clock-sec">:00</span>
       </div>
       <div class="date" id="clock-date"></div>
-    </section>
-
-    <!-- Liquid glass demo card -->
-    <section class="widget glass" id="glass" data-id="glass" data-title="Liquid Glass demo" data-toggle data-interactive>
-      <div class="glass-clip"><div class="glass-bg"></div></div>
-      <div class="glass-content">
-        <h2>Liquid Glass</h2>
-        <p>Drag me around. The wallpaper behind is refracted at the edges.</p>
-        <button id="click-demo" type="button">Clicked 0 times</button>
-      </div>
     </section>
 
     <!-- Weather (Open-Meteo, no API key) -->
@@ -107,6 +102,18 @@
       </div>
     </section>
 
+    <!-- Quick settings: Wi-Fi, Bluetooth, power mode, volume, ... (tiles are built by panels/system.js) -->
+    <section class="widget glass system" id="system" data-id="system" data-title="Quick settings" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="sys-tiles" id="sys-tiles"></div>
+        <div class="sys-power" id="sys-power"></div>
+        <div class="sys-sliders" id="sys-sliders"></div>
+        <div class="sys-battery" id="sys-battery"></div>
+        <div class="sys-empty" id="sys-empty">Pick what to show in Settings &rarr; Panels &rarr; Quick settings</div>
+      </div>
+    </section>
+
     <!-- Settings panel (opened from the right-click menu or the tray) -->
     <section class="widget glass hidden" id="settings" data-id="settings" data-interactive>
       <div class="glass-clip"><div class="glass-bg"></div></div>
@@ -120,6 +127,9 @@
 
           <div class="section-title">Panels</div>
           <div id="panel-list"></div>
+
+          <div class="section-title">Layout</div>
+          <div id="layout-list"></div>
 
           <div class="section-title">Glass</div>
           <label class="row">
@@ -153,5 +163,6 @@
     <script src="panels/clock.js"></script>
     <script src="panels/weather.js"></script>
     <script src="panels/media.js"></script>
+    <script src="panels/system.js"></script>
   </body>
 </html>
