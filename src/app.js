@@ -442,12 +442,31 @@ async function loadWallpaper() {
     const scale = Math.max(vw / img.naturalWidth, vh / img.naturalHeight);
     const iw = img.naturalWidth * scale;
     const ih = img.naturalHeight * scale;
+
+    // Draw the wallpaper onto a canvas that is GLASS_PAD larger on every side and extend the
+    // screen edges into that margin. Without this, a glass widget at the edge of the screen
+    // would refract "nothing" there and show a light stripe.
+    const P = GLASS_PAD + 16;
+    const W = Math.ceil(vw + 2 * P);
+    const H = Math.ceil(vh + 2 * P);
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const g = c.getContext("2d");
+    g.drawImage(img, P + (vw - iw) / 2, P + (vh - ih) / 2, iw, ih);
+    g.drawImage(c, P, P, 1, vh, 0, P, P, vh); // left
+    g.drawImage(c, P + vw - 1, P, 1, vh, P + vw, P, W - P - vw, vh); // right
+    g.drawImage(c, 0, P, W, 1, 0, 0, W, P); // top
+    g.drawImage(c, 0, P + vh - 1, W, 1, 0, P + vh, W, H - P - vh); // bottom
+    const padded = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.92));
+    URL.revokeObjectURL(url);
+
     const root = document.documentElement.style;
-    root.setProperty("--wp", `url("${url}")`);
-    root.setProperty("--wp-w", `${iw}px`);
-    root.setProperty("--wp-h", `${ih}px`);
-    root.setProperty("--wp-ox", `${(vw - iw) / 2}px`);
-    root.setProperty("--wp-oy", `${(vh - ih) / 2}px`);
+    root.setProperty("--wp", `url("${URL.createObjectURL(padded)}")`);
+    root.setProperty("--wp-w", `${W}px`);
+    root.setProperty("--wp-h", `${H}px`);
+    root.setProperty("--wp-ox", `${-P}px`);
+    root.setProperty("--wp-oy", `${-P}px`);
   } catch (err) {
     console.warn("Wallpaper unavailable, using fallback gradient:", err);
   }
@@ -604,27 +623,48 @@ async function pollAbove() {
 
 async function captureGlass(el) {
   const r = el.getBoundingClientRect();
-  const buf = await invoke("capture_region", {
-    x: r.left - GLASS_PAD,
-    y: r.top - GLASS_PAD,
-    w: r.width + GLASS_PAD * 2,
-    h: r.height + GLASS_PAD * 2,
-    scale: CAPTURE_SCALE,
-  });
+  // The backdrop area is the card plus GLASS_PAD on every side; clamp it to the screen and
+  // extend the screen edges into the missing margin (no dark/light stripe at screen edges).
+  const X = r.left - GLASS_PAD;
+  const Y = r.top - GLASS_PAD;
+  const W = r.width + GLASS_PAD * 2;
+  const H = r.height + GLASS_PAD * 2;
+  const x0 = Math.max(0, X);
+  const y0 = Math.max(0, Y);
+  const x1 = Math.min(window.innerWidth, X + W);
+  const y1 = Math.min(window.innerHeight, Y + H);
+  if (x1 - x0 < 2 || y1 - y0 < 2) return;
+
+  const buf = await invoke("capture_region", { x: x0, y: y0, w: x1 - x0, h: y1 - y0, scale: CAPTURE_SCALE });
   const dv = new DataView(buf);
   const w = dv.getUint32(0, true);
   const h = dv.getUint32(4, true);
+  const k = w / (x1 - x0); // canvas pixels per CSS pixel
+  const cw = Math.round(W * k);
+  const ch = Math.round(H * k);
+
   let canvas = el.querySelector(".live-canvas");
   if (!canvas) {
     canvas = document.createElement("canvas");
     canvas.className = "live-canvas";
     el.querySelector(".glass-bg").appendChild(canvas);
   }
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w;
-    canvas.height = h;
+  if (canvas.width !== cw || canvas.height !== ch) {
+    canvas.width = cw;
+    canvas.height = ch;
   }
-  canvas.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(buf, 8, w * h * 4), w, h), 0, 0);
+  const g = canvas.getContext("2d");
+  const tmp = captureGlass.tmp || (captureGlass.tmp = document.createElement("canvas"));
+  tmp.width = w;
+  tmp.height = h;
+  tmp.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(buf, 8, w * h * 4), w, h), 0, 0);
+  const dx = Math.round((x0 - X) * k);
+  const dy = Math.round((y0 - Y) * k);
+  g.drawImage(tmp, dx, dy, w, h);
+  if (dx > 0) g.drawImage(canvas, dx, dy, 1, h, 0, dy, dx, h); // left margin
+  if (dx + w < cw) g.drawImage(canvas, dx + w - 1, dy, 1, h, dx + w, dy, cw - dx - w, h); // right
+  if (dy > 0) g.drawImage(canvas, 0, dy, cw, 1, 0, 0, cw, dy); // top
+  if (dy + h < ch) g.drawImage(canvas, 0, dy + h - 1, cw, 1, 0, dy + h, cw, ch - dy - h); // bottom
 }
 
 async function captureLoop() {
