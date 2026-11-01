@@ -780,7 +780,7 @@ function applyEnabled() {
 
 const frontToggle = document.getElementById("front-toggle");
 const CAPTURE_SCALE = 0.35; // the backdrop is blurred anyway, a third of the resolution is plenty
-const CAPTURE_INTERVAL = 100; // ~10 fps while something changes
+const CAPTURE_INTERVAL = 200; // 5 fps while something changes (the glass is blurred anyway)
 const CAPTURE_IDLE_INTERVAL = 400; // when nothing behind the widgets changes
 let live = false;
 

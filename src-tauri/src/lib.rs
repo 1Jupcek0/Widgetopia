@@ -45,6 +45,18 @@ fn set_hit_regions(state: tauri::State<HitRegions>, rects: Vec<Rect>) {
     REGIONS_VERSION.fetch_add(1, Ordering::Relaxed);
 }
 
+/// The overlay's HWND, looked up once: `win.hwnd()` is a round trip to the UI thread.
+#[cfg(windows)]
+fn overlay_hwnd(win: &tauri::WebviewWindow) -> Option<windows::Win32::Foundation::HWND> {
+    static CACHE: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+    let mut raw = CACHE.load(Ordering::Relaxed);
+    if raw == 0 {
+        raw = win.hwnd().ok()?.0 as isize;
+        CACHE.store(raw, Ordering::Relaxed);
+    }
+    Some(windows::Win32::Foundation::HWND(raw as *mut _))
+}
+
 /// Cursor position in CSS pixels relative to the overlay.
 /// Uses plain Win32 calls: going through the Tauri window API means a round trip to the
 /// UI thread for every call, which is wasteful at 30 Hz.
@@ -55,7 +67,7 @@ fn cursor_css(win: &tauri::WebviewWindow) -> Option<(f64, f64)> {
         Graphics::Gdi::ClientToScreen,
         UI::{HiDpi::GetDpiForWindow, WindowsAndMessaging::GetCursorPos},
     };
-    let hwnd = win.hwnd().ok()?;
+    let hwnd = overlay_hwnd(win)?;
     unsafe {
         let mut cursor = POINT::default();
         GetCursorPos(&mut cursor).ok()?;
@@ -221,7 +233,7 @@ fn sink_overlay(win: &tauri::WebviewWindow) {
         use windows::Win32::UI::WindowsAndMessaging::*;
         unsafe {
             // Owned by the desktop, so "bottom" lands right above it and below every normal window.
-            if let Ok(hwnd) = win.hwnd() {
+            if let Some(hwnd) = overlay_hwnd(win) {
                 let _ = SetWindowPos(hwnd, Some(HWND_BOTTOM), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
             }
         }
@@ -242,7 +254,7 @@ fn above_windows(win: &tauri::WebviewWindow) -> bool {
             core::w,
             Win32::{Foundation::RECT, UI::WindowsAndMessaging::*},
         };
-        let (Ok(hwnd), Ok(progman)) = (win.hwnd(), FindWindowW(w!("Progman"), None)) else {
+        let (Some(hwnd), Ok(progman)) = (overlay_hwnd(win), FindWindowW(w!("Progman"), None)) else {
             return false;
         };
         let mut cur = hwnd;
