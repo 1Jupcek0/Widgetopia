@@ -1,0 +1,274 @@
+"use strict";
+
+/*
+ * Media panel: shows what is playing in Spotify, browsers (YouTube, ...) and any other app
+ * that talks to Windows' media controls, and lets you control it.
+ * The backend (src-tauri/src/media.rs) pushes `media-update` events with all sessions.
+ */
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const card = $("media");
+
+  const ICONS = {
+    play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+  };
+
+  let sessions = []; // sessions worth showing (have a title or are playing)
+  let receivedAt = Date.now();
+  let manualId = null; // source picked by clicking the source badge
+  let lastPlayingId = null; // the session that started playing most recently
+  let shownId = null;
+  const prevStatus = new Map();
+  const artCache = new Map(); // key -> object URL
+  const artPending = new Set();
+  let ticker = 0;
+
+  /* --- helpers ------------------------------------------------------ */
+
+  const kindOf = (id) => {
+    const s = id.toLowerCase();
+    if (s.includes("spotify")) return "spotify";
+    if (/(chrome|msedge|edge|firefox|brave|opera|vivaldi|browser)/.test(s)) return "browser";
+    return "other";
+  };
+
+  function nameOf(id) {
+    const s = id.toLowerCase();
+    const known = [
+      ["spotify", "Spotify"],
+      ["msedge", "Edge"],
+      ["chrome", "Chrome"],
+      ["firefox", "Firefox"],
+      ["brave", "Brave"],
+      ["opera", "Opera"],
+      ["vivaldi", "Vivaldi"],
+    ];
+    for (const [needle, name] of known) if (s.includes(needle)) return name;
+    const word = id.replace(/\.exe$/i, "").split(/[!_.\\/]/).filter(Boolean)[0] || "App";
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }
+
+  const artOption = (kind) => (kind === "spotify" ? "artSpotify" : kind === "browser" ? "artBrowser" : "artOther");
+
+  const fmt = (ms) => {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = String(total % 60).padStart(2, "0");
+    return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+  };
+
+  /* --- source selection --------------------------------------------- */
+
+  function pick() {
+    if (!sessions.length) return null;
+    const manual = sessions.find((s) => s.id === manualId);
+    if (manual) return manual;
+    const playing = sessions.filter((s) => s.status === "Playing");
+    const priority = opt("media", "priority");
+    if (priority === "spotify" || priority === "browser") {
+      const preferred = (playing.length ? playing : sessions).find((s) => kindOf(s.id) === priority);
+      if (preferred) return preferred;
+    }
+    if (playing.length) return playing.find((s) => s.id === lastPlayingId) || playing[0];
+    return sessions.find((s) => s.id === shownId) || sessions[0];
+  }
+
+  function cycleSource() {
+    if (sessions.length < 2) return;
+    const cur = pick();
+    const idx = sessions.findIndex((s) => s.id === cur?.id);
+    manualId = sessions[(idx + 1) % sessions.length].id;
+    render();
+  }
+
+  /* --- artwork ------------------------------------------------------ */
+
+  async function loadArt(sel, retry) {
+    const key = `${sel.id}|${sel.title}|${sel.artist}|${sel.album}`;
+    try {
+      const buf = await invoke("media_thumbnail", { id: sel.id });
+      if (buf.byteLength > 0) {
+        const old = artCache.get(key);
+        const url = URL.createObjectURL(new Blob([buf]));
+        artCache.set(key, url);
+        if (old) URL.revokeObjectURL(old);
+        if (pick()?.id === sel.id) applyArt(sel, key);
+      }
+    } catch {
+      /* no artwork */
+    }
+    if (retry) {
+      // Apps like Spotify swap the cover a moment after the title changes.
+      setTimeout(() => loadArt(sel, false), 1500);
+    } else {
+      artPending.delete(key);
+    }
+  }
+
+  function ensureArt(sel) {
+    const key = `${sel.id}|${sel.title}|${sel.artist}|${sel.album}`;
+    if (artCache.has(key)) return applyArt(sel, key);
+    clearArt();
+    if (!artPending.has(key)) {
+      artPending.add(key);
+      loadArt(sel, true);
+    }
+    // keep the cache small
+    while (artCache.size > 12) {
+      const first = artCache.keys().next().value;
+      URL.revokeObjectURL(artCache.get(first));
+      artCache.delete(first);
+    }
+  }
+
+  function applyArt(sel, key) {
+    const url = artCache.get(key);
+    if (!url) return clearArt();
+    const img = $("m-img");
+    if (img.dataset.src !== url) {
+      img.dataset.src = url;
+      img.onload = () => card.classList.toggle("wide", img.naturalWidth / img.naturalHeight > 1.3);
+      img.src = url;
+    }
+    card.classList.add("has-art");
+    $("m-ambient").style.backgroundImage = opt("media", "ambient") ? `url("${url}")` : "none";
+  }
+
+  function clearArt() {
+    card.classList.remove("has-art", "wide");
+    $("m-img").removeAttribute("src");
+    delete $("m-img").dataset.src;
+    $("m-ambient").style.backgroundImage = "none";
+  }
+
+  /* --- rendering ---------------------------------------------------- */
+
+  function render() {
+    const sel = pick();
+    if (!sel) {
+      card.classList.add("empty");
+      clearArt();
+      return;
+    }
+    shownId = sel.id;
+    card.classList.remove("empty");
+
+    const kind = kindOf(sel.id);
+    $("m-title").textContent = sel.title || "Unknown title";
+    $("m-artist").textContent = sel.artist;
+    $("m-album").textContent = sel.album;
+    $("m-source-name").textContent = nameOf(sel.id);
+    $("m-source-count").textContent = sessions.length > 1 ? `${sessions.findIndex((s) => s.id === sel.id) + 1}/${sessions.length}` : "";
+    $("m-source").classList.toggle("multi", sessions.length > 1);
+    $("m-note").textContent = kind === "browser" ? "▶" : "♪";
+
+    if (opt("media", kind === "spotify" ? "artSpotify" : kind === "browser" ? "artBrowser" : "artOther")) ensureArt(sel);
+    else clearArt();
+
+    const playing = sel.status === "Playing";
+    $("m-play").innerHTML = playing ? ICONS.pause : ICONS.play;
+    $("m-play").disabled = !sel.can_toggle;
+    $("m-prev").disabled = !sel.can_prev;
+    $("m-next").disabled = !sel.can_next;
+
+    card.classList.toggle("no-progress", !opt("media", "progress") || sel.duration_ms <= 0);
+    tick();
+  }
+
+  /** Current position, extrapolated between backend updates. */
+  function position(sel) {
+    if (sel.status !== "Playing") return sel.position_ms;
+    const now = Date.now();
+    const base = sel.updated_ms > 1e12 && Math.abs(now - sel.updated_ms) < 6 * 3600 * 1000 ? sel.updated_ms : receivedAt;
+    return sel.position_ms + (now - base);
+  }
+
+  function tick() {
+    const sel = sessions.find((s) => s.id === shownId);
+    if (!sel || card.classList.contains("off") || card.classList.contains("empty")) return;
+    const dur = sel.duration_ms;
+    const pos = dur > 0 ? Math.min(position(sel), dur) : position(sel);
+    $("m-pos").textContent = fmt(pos);
+    $("m-dur").textContent = dur > 0 ? fmt(dur) : "";
+    $("m-fill").style.width = dur > 0 ? `${(pos / dur) * 100}%` : "0%";
+  }
+
+  /* --- data from the backend ---------------------------------------- */
+
+  function update(list) {
+    receivedAt = Date.now();
+    sessions = list.filter((s) => s.title || s.status === "Playing");
+    for (const s of sessions) {
+      if (s.status === "Playing" && prevStatus.get(s.id) !== "Playing") lastPlayingId = s.id;
+      prevStatus.set(s.id, s.status);
+    }
+    if (manualId && !sessions.some((s) => s.id === manualId)) manualId = null;
+    render();
+  }
+
+  const refreshSoon = () => setTimeout(() => invoke("media_snapshot").then(update).catch(() => {}), 350);
+
+  const control = (action) => () => {
+    const sel = pick();
+    if (!sel) return;
+    invoke("media_control", { id: sel.id, action }).then(refreshSoon).catch(() => {});
+  };
+
+  $("m-prev").addEventListener("click", control("prev"));
+  $("m-next").addEventListener("click", control("next"));
+  $("m-play").addEventListener("click", control("toggle"));
+  $("m-source").addEventListener("click", cycleSource);
+  $("m-bar").addEventListener("click", (e) => {
+    const sel = pick();
+    if (!sel || !sel.can_seek || sel.duration_ms <= 0) return;
+    const r = $("m-bar").getBoundingClientRect();
+    const ms = Math.round(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * sel.duration_ms);
+    sel.position_ms = ms;
+    sel.updated_ms = Date.now();
+    receivedAt = Date.now();
+    tick();
+    invoke("media_seek", { id: sel.id, ms }).then(refreshSoon).catch(() => {});
+  });
+
+  function setActive(on) {
+    invoke("media_watch", { on }).catch(() => {});
+    clearInterval(ticker);
+    if (on) {
+      ticker = setInterval(tick, 500);
+      invoke("media_snapshot").then(update).catch(() => {});
+    }
+  }
+
+  registerPanel("media", {
+    options: [
+      {
+        key: "priority",
+        label: "Source priority",
+        type: "choice",
+        def: "auto",
+        choices: [
+          ["auto", "Newest playing"],
+          ["spotify", "Spotify first"],
+          ["browser", "Browser first"],
+        ],
+      },
+      { key: "artSpotify", label: "Spotify artwork", type: "toggle", def: true },
+      { key: "artBrowser", label: "Browser artwork", type: "toggle", def: true },
+      { key: "artOther", label: "Other apps artwork", type: "toggle", def: true },
+      { key: "ambient", label: "Artwork glow", type: "toggle", def: true },
+      { key: "progress", label: "Progress bar", type: "toggle", def: true },
+    ],
+    actions: [{ label: "Next source", run: cycleSource }],
+    onOption: (key) => {
+      if (key === "priority") manualId = null;
+      render();
+    },
+    onToggle: setActive,
+    init: () => {
+      listen("media-update", (e) => update(e.payload));
+    },
+  });
+})();
