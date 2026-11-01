@@ -12,6 +12,7 @@
   const card = $("launcher");
   const grid = $("ql-grid");
   const input = $("ql-input");
+  const argsInput = $("ql-args");
 
   const items = state.launcher.items; // [{ id, target, name }]
   const icons = new Map(); // target -> data URL (null = none, fall back to a symbol)
@@ -77,11 +78,11 @@
       b.innerHTML = `<span class="ql-ico"></span><span class="ql-name"></span>`;
       b.querySelector(".ql-name").textContent = item.name;
       const ico = b.querySelector(".ql-ico");
-      const known = icons.get(item.target);
+      const known = icons.get(item.icon || item.target);
       if (known) setIcon(ico, known);
       else {
         ico.innerHTML = isUrl(item.target) ? SYMBOLS.link : SYMBOLS.file;
-        loadIcon(item.target).then((url) => url && setIcon(ico, url));
+        loadIcon(item.icon || item.target).then((url) => url && setIcon(ico, url));
       }
       b.addEventListener("click", () => launch(item, b));
       grid.appendChild(b);
@@ -115,15 +116,21 @@
   /* --- actions ------------------------------------------------------ */
 
   async function launch(item, button) {
-    const ok = await invoke("launch_item", { target: item.target }).catch(() => false);
+    const ok = await invoke("launch_item", { target: item.target, args: item.args || null }).catch(() => false);
     button.classList.add(ok ? "launched" : "fail");
     setTimeout(() => button.classList.remove("launched", "fail"), 700);
   }
 
-  function addTarget(raw) {
+  function addTarget(raw, args = "") {
     const target = raw.trim().replace(/^"(.*)"$/, "$1");
-    if (!target || items.some((i) => i.target.toLowerCase() === target.toLowerCase())) return false;
-    items.push({ id: `${Date.now().toString(36)}${items.length}`, target, name: nameFor(target) });
+    args = args.trim();
+    if (!target || items.some((i) => i.target.toLowerCase() === target.toLowerCase() && (i.args || "") === args)) return false;
+    items.push({
+      id: `${Date.now().toString(36)}${items.length}`,
+      target,
+      args,
+      name: args && !isUrl(target) ? `${nameFor(target)} ${args}` : nameFor(target),
+    });
     saveState();
     return true;
   }
@@ -157,6 +164,7 @@
   async function openAdd() {
     card.classList.add("adding");
     input.value = "";
+    argsInput.value = "";
     await setTyping(true);
     input.focus();
   }
@@ -167,16 +175,18 @@
   }
 
   function confirmAdd() {
-    if (addTarget(input.value)) render();
+    if (addTarget(input.value, argsInput.value)) render();
     closeAdd();
   }
 
   $("ql-add-ok").addEventListener("click", confirmAdd);
   $("ql-add-cancel").addEventListener("click", closeAdd);
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") confirmAdd();
-    if (e.key === "Escape") closeAdd();
-  });
+  for (const field of [input, argsInput]) {
+    field.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") confirmAdd();
+      if (e.key === "Escape") closeAdd();
+    });
+  }
 
   /* --- drop files onto the panel ------------------------------------ */
 

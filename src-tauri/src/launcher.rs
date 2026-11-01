@@ -25,14 +25,16 @@ mod imp {
         },
     };
 
-    pub fn launch(target: &str) -> bool {
+    pub fn launch(target: &str, args: &str) -> bool {
         let file = HSTRING::from(target);
+        let params = HSTRING::from(args);
         let path = Path::new(target);
         // Programs expect to start in their own folder.
         let dir = path.is_file().then(|| path.parent()).flatten().map(|p| HSTRING::from(p.as_os_str()));
         unsafe {
             let dir_ptr = dir.as_ref().map_or(PCWSTR::null(), |d| PCWSTR(d.as_ptr()));
-            let result = ShellExecuteW(None, w!("open"), &file, PCWSTR::null(), dir_ptr, SW_SHOWNORMAL);
+            let params_ptr = if args.is_empty() { PCWSTR::null() } else { PCWSTR(params.as_ptr()) };
+            let result = ShellExecuteW(None, w!("open"), &file, params_ptr, dir_ptr, SW_SHOWNORMAL);
             result.0 as isize > 32
         }
     }
@@ -95,14 +97,16 @@ mod imp {
 }
 
 #[tauri::command]
-pub async fn launch_item(target: String) -> bool {
+pub async fn launch_item(target: String, args: Option<String>) -> bool {
     #[cfg(windows)]
     {
-        tauri::async_runtime::spawn_blocking(move || imp::launch(&target)).await.unwrap_or(false)
+        tauri::async_runtime::spawn_blocking(move || imp::launch(&target, args.as_deref().unwrap_or("")))
+            .await
+            .unwrap_or(false)
     }
     #[cfg(not(windows))]
     {
-        let _ = target;
+        let _ = (target, args);
         false
     }
 }

@@ -1807,3 +1807,10 @@ button.cal-ev:hover {
 .cal-done {
   margin-top: 10px;
 }
+
+.ql-add-row {
+  flex-wrap: wrap;
+}
+.ql-add-row input {
+  flex: 1 1 100%;
+}
