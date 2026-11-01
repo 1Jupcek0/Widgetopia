@@ -15,7 +15,7 @@ window per widget.
 - Weather widget (current conditions + 5-day forecast) powered by [Open-Meteo](https://open-meteo.com), no API key needed; search for any city, optional Fahrenheit
 - "Liquid glass" demo card: the wallpaper is blurred and refracted at the rim via an SVG displacement filter
 - Optional "Bring to front on click" mode (Settings): a click raises the widgets above windows and the glass blurs/refracts those windows too (live screen capture, ~15 fps, only while a window is behind a widget)
-- Media panel (Spotify, browsers, any app using Windows media controls): title/artist/album, cover art, progress with seeking, play/pause/next/previous, source priority and per-source artwork switches
+- Media panel (Spotify, browsers, any app using Windows media controls): title/artist/album, cover art, progress with seeking, play/pause/next/previous, source priority, per-source artwork switches and optional synced lyrics (fetched from [LRCLIB](https://lrclib.net); sends artist/title, off by default)
 - Every panel has its own options, available in its right-click menu and under Settings -> Panels
 - Settings lists every panel with an on/off switch
 - Right click on a widget: *Reload*, *Settings*, *Lock / Unlock* (the tray icon has the same Reload / Settings). Settings holds everything else (glass blur/refraction, quit)

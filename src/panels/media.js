@@ -144,6 +144,71 @@
     $("m-ambient").style.backgroundImage = "none";
   }
 
+  /* --- lyrics (synced, from LRCLIB; opt-in) ------------------------- */
+
+  const lyricsCache = new Map(); // key -> [{ t, text }] | null (none found)
+  const lyricsPending = new Set();
+  let lyricIdx = -2;
+
+  const lyricsKey = (s) => `${s.artist}|${s.title}|${s.album}|${Math.round(s.duration_ms / 1000)}`;
+
+  function parseLrc(text) {
+    const lines = [];
+    for (const raw of text.split(/\r?\n/)) {
+      const stamps = [...raw.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+      if (!stamps.length) continue;
+      const line = raw.replace(/\[[^\]]*\]/g, "").trim();
+      for (const m of stamps) lines.push({ t: (Number(m[1]) * 60 + Number(m[2])) * 1000, text: line });
+    }
+    return lines.sort((a, b) => a.t - b.t);
+  }
+
+  async function fetchLyrics(sel) {
+    const key = lyricsKey(sel);
+    if (lyricsCache.has(key) || lyricsPending.has(key)) return;
+    lyricsPending.add(key);
+    try {
+      // Drop "(Remastered)", "(feat. X)" and secondary artists: they hurt matching.
+      const title = sel.title.replace(/\s*[(\[][^)\]]*(remaster|live|feat|version|edit)[^)\]]*[)\]]/gi, "").trim();
+      const artist = sel.artist.split(/,|&|;| feat\.? /i)[0].trim();
+      const exact = new URLSearchParams({ track_name: title, artist_name: artist });
+      if (sel.album) exact.set("album_name", sel.album);
+      if (sel.duration_ms > 0) exact.set("duration", Math.round(sel.duration_ms / 1000));
+      let res = await fetch(`https://lrclib.net/api/get?${exact}`);
+      let hit = res.ok ? await res.json() : null;
+      if (!hit?.syncedLyrics) {
+        res = await fetch(`https://lrclib.net/api/search?${new URLSearchParams({ track_name: title, artist_name: artist })}`);
+        hit = res.ok ? (await res.json()).find((r) => r.syncedLyrics) : null;
+      }
+      lyricsCache.set(key, hit?.syncedLyrics ? parseLrc(hit.syncedLyrics) : null);
+    } catch {
+      lyricsCache.set(key, null); // offline: try again on the next track
+    } finally {
+      lyricsPending.delete(key);
+      if (pick()?.id === sel.id) render();
+    }
+    while (lyricsCache.size > 20) lyricsCache.delete(lyricsCache.keys().next().value);
+  }
+
+  /** Lines for the selected track, or null (not enabled / not found yet). */
+  function lyricsFor(sel) {
+    if (!opt("media", "lyrics")) return null;
+    const lines = lyricsCache.get(lyricsKey(sel));
+    if (lines === undefined) fetchLyrics(sel);
+    return lines?.length ? lines : null;
+  }
+
+  function showLyric(sel, pos) {
+    const lines = lyricsFor(sel);
+    if (!lines) return;
+    let idx = -1;
+    while (idx + 1 < lines.length && lines[idx + 1].t <= pos + 250) idx++;
+    if (idx === lyricIdx) return;
+    lyricIdx = idx;
+    $("m-lyric-cur").textContent = idx < 0 ? "♪" : lines[idx].text || "♪";
+    $("m-lyric-next").textContent = lines[idx + 1]?.text || "";
+  }
+
   /* --- rendering ---------------------------------------------------- */
 
   function render() {
@@ -175,6 +240,9 @@
     $("m-next").disabled = !sel.can_next;
 
     card.classList.toggle("no-progress", !opt("media", "progress") || sel.duration_ms <= 0);
+    const hasLyrics = !!lyricsFor(sel);
+    if (card.classList.contains("lyrics-on") !== hasLyrics) lyricIdx = -2;
+    card.classList.toggle("lyrics-on", hasLyrics);
     tick();
   }
 
@@ -194,6 +262,7 @@
     $("m-pos").textContent = fmt(pos);
     $("m-dur").textContent = dur > 0 ? fmt(dur) : "";
     $("m-fill").style.width = dur > 0 ? `${(pos / dur) * 100}%` : "0%";
+    if (card.classList.contains("lyrics-on")) showLyric(sel, pos);
   }
 
   /* --- data from the backend ---------------------------------------- */
@@ -258,6 +327,7 @@
       { key: "artSpotify", label: "Spotify artwork", type: "toggle", def: true },
       { key: "artBrowser", label: "Browser artwork", type: "toggle", def: true },
       { key: "artOther", label: "Other apps artwork", type: "toggle", def: true },
+      { key: "lyrics", label: "Show lyrics (online)", type: "toggle", def: false },
       { key: "ambient", label: "Artwork glow", type: "toggle", def: true },
       { key: "progress", label: "Progress bar", type: "toggle", def: true },
     ],
