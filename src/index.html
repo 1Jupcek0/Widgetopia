@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Widgetopia</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="unlocked">
+    <!-- SVG filters for the glass widgets are created here by app.js -->
+    <svg id="filters" width="0" height="0" style="position: absolute" aria-hidden="true"></svg>
+
+    <!-- Clock: no glass, just text with a shadow so it stays readable on any wallpaper -->
+    <section class="widget clock" id="clock" data-id="clock" data-title="Clock" data-toggle>
+      <div class="time">
+        <span class="hm" id="clock-hm">00:00</span><span class="sec" id="clock-sec">:00</span>
+      </div>
+      <div class="date" id="clock-date"></div>
+    </section>
+
+    <!-- Liquid glass demo card -->
+    <section class="widget glass" id="glass" data-id="glass" data-title="Liquid Glass demo" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <h2>Liquid Glass</h2>
+        <p>Drag me around. The wallpaper behind is refracted at the edges.</p>
+        <button id="click-demo" type="button">Clicked 0 times</button>
+      </div>
+    </section>
+
+    <!-- Weather (Open-Meteo, no API key) -->
+    <section class="widget glass weather" id="weather" data-id="weather" data-title="Weather" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="wx-main" id="wx-main">
+          <div class="wx-head">
+            <button type="button" id="wx-loc" class="wx-loc" title="Change location">
+              <span class="pin">&#128205;</span><span id="wx-name">Prague</span><span class="caret">&#9662;</span>
+            </button>
+            <button type="button" id="wx-refresh" class="icon-btn" title="Refresh">&#8635;</button>
+          </div>
+          <div class="wx-now">
+            <div class="wx-icon" id="wx-icon">&#9925;</div>
+            <div class="wx-temp" id="wx-temp">--&deg;</div>
+            <div class="wx-meta">
+              <div class="wx-cond" id="wx-cond">Loading&hellip;</div>
+              <small id="wx-feels"></small>
+              <small id="wx-extra"></small>
+            </div>
+          </div>
+          <div class="wx-days" id="wx-days"></div>
+        </div>
+        <div class="wx-search" id="wx-search">
+          <input type="text" id="wx-input" placeholder="Search city&hellip;" autocomplete="off" spellcheck="false" />
+          <ul id="wx-results"></ul>
+          <button type="button" id="wx-cancel">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Media: what is playing in Spotify, browsers and other apps -->
+    <section class="widget glass media empty" id="media" data-id="media" data-title="Media" data-toggle data-interactive>
+      <div class="glass-clip">
+        <div class="glass-bg"></div>
+        <div class="m-ambient" id="m-ambient"></div>
+      </div>
+      <div class="glass-content">
+        <div class="m-empty">
+          <span class="m-empty-icon">&#9834;</span>
+          <span>Nothing playing</span>
+          <small>Play something in Spotify or your browser</small>
+        </div>
+        <div class="m-body">
+          <div class="m-top">
+            <div class="m-art" id="m-art">
+              <img id="m-img" alt="" draggable="false" />
+              <span class="m-note" id="m-note">&#9834;</span>
+            </div>
+            <div class="m-info">
+              <button type="button" id="m-source" class="m-source" title="Switch source">
+                <span id="m-source-name">Spotify</span><span id="m-source-count"></span>
+              </button>
+              <div class="m-title" id="m-title"></div>
+              <div class="m-artist" id="m-artist"></div>
+              <div class="m-album" id="m-album"></div>
+            </div>
+          </div>
+          <div class="m-progress">
+            <span id="m-pos">0:00</span>
+            <div class="m-bar" id="m-bar" data-nodrag><i id="m-fill"></i></div>
+            <span id="m-dur">0:00</span>
+          </div>
+          <div class="m-controls">
+            <button type="button" id="m-prev" class="m-btn" title="Previous">
+              <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12 18 6v12z" /></svg>
+            </button>
+            <button type="button" id="m-play" class="m-btn m-play" title="Play / pause"></button>
+            <button type="button" id="m-next" class="m-btn" title="Next">
+              <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18V6l8.5 6z" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings panel (opened from the right-click menu or the tray) -->
+    <section class="widget glass hidden" id="settings" data-id="settings" data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <h2>Settings</h2>
+        <div class="scroll">
+          <label class="row switch-row">
+            <span>Lock widgets</span>
+            <input type="checkbox" id="lock-toggle" class="switch" />
+          </label>
+
+          <div class="section-title">Panels</div>
+          <div id="panel-list"></div>
+
+          <div class="section-title">Glass</div>
+          <label class="row">
+            <span>Blur</span>
+            <input type="range" id="blur" min="0" max="20" step="0.5" value="4" />
+          </label>
+          <label class="row">
+            <span>Refraction</span>
+            <input type="range" id="refraction" min="0" max="60" step="1" value="36" />
+          </label>
+          <label class="row switch-row">
+            <span>Bring to front on click</span>
+            <input type="checkbox" id="front-toggle" class="switch" />
+          </label>
+          <p class="hint">
+            Off: widgets stay in the background. On: a click raises them above windows and the glass blurs those
+            windows too.
+          </p>
+        </div>
+        <div class="btn-row">
+          <button id="settings-close" type="button">Close</button>
+          <button id="quit" type="button" class="danger">Quit</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right-click menu (filled by app.js) -->
+    <div id="ctx" class="ctx hidden" role="menu"></div>
+
+    <script src="app.js"></script>
+    <script src="panels/clock.js"></script>
+    <script src="panels/weather.js"></script>
+    <script src="panels/media.js"></script>
+  </body>
+</html>
