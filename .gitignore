@@ -1,0 +1,16 @@
+# Dependencies and build output
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+
+# Local AI assistant files (kept out of the public repo)
+CLAUDE.md
+.claude/
+.jš/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
