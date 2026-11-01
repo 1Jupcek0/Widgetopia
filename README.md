@@ -19,6 +19,7 @@ window per widget.
 - Every panel has its own options, available in its right-click menu and under Settings -> Panels
 - Agents panel for [herdr](https://herdr.dev): working / idle / done state of every agent pane; click opens the agent and brings its terminal to the front
 - Claude usage panel: 5 h / weekly limits and 7-day token statistics (see below)
+- Performance panel: CPU, GPU, RAM, disk, network and the temperatures Windows exposes (ACPI thermal zone, NVIDIA GPU sensor)
 - Quick settings panel: Wi-Fi, Bluetooth, airplane mode, power mode, volume, microphone mute, brightness, dark mode, battery, lock; every tile is optional
 - Layout tools (Settings -> Layout): grid overlay, snap to grid / screen centre / edges / other panels with alignment guides, proportional resizing with a corner grip (double-click resets), optionally allowed while locked
 - Settings lists every panel with an on/off switch
@@ -53,6 +54,7 @@ npm run build
 | Panels (clock, weather, media, quick settings) | `src/panels/` |
 | Media sessions (Windows media controls) | `src-tauri/src/media.rs` |
 | Wi-Fi, Bluetooth, power mode, audio, ... | `src-tauri/src/system.rs` |
+| CPU / GPU / RAM / disk / network, temperatures | `src-tauri/src/perf.rs` |
 | herdr agents | `src-tauri/src/herdr.rs` |
 | Claude usage statistics | `src-tauri/src/claude.rs` |
 

@@ -88,6 +88,11 @@
     nameEl.textContent = location_().name;
   }
 
+  /** Without the forecast the card shrinks to just the current weather. */
+  function applyForecast() {
+    card.classList.toggle("no-forecast", !opt("weather", "forecast"));
+  }
+
   /* --- location search --------------------------------------------- */
 
   let searchTimer = 0;
@@ -168,14 +173,21 @@
   });
 
   registerPanel("weather", {
-    options: [{ key: "fahrenheit", label: "Fahrenheit / mph", type: "toggle", def: false }],
+    options: [
+      { key: "forecast", label: "Show forecast", type: "toggle", def: true },
+      { key: "fahrenheit", label: "Fahrenheit / mph", type: "toggle", def: false },
+    ],
     actions: [{ label: "Change location…", run: openSearch }],
-    onOption: () => {
-      showCached();
-      refresh();
+    onOption: (key) => {
+      applyForecast();
+      if (key === "fahrenheit") {
+        showCached();
+        refresh();
+      }
     },
     onToggle: (on) => on && refresh(),
     init: () => {
+      applyForecast();
       showCached();
       setInterval(refresh, REFRESH_MS);
     },

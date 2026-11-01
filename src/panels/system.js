@@ -69,6 +69,14 @@
     return b;
   }
 
+  /** A greyed-out tile for hardware/settings this PC (or Windows) does not expose. */
+  function unavailableTile(icon, label, why) {
+    const b = tile({ icon, label, sub: why, on: false, click: () => {} });
+    b.classList.add("na");
+    b.disabled = true;
+    return b;
+  }
+
   function toggleTile(key, label, icon, value, sub) {
     return tile({
       icon,
@@ -85,10 +93,20 @@
   function renderTiles(o, s) {
     const host = $("sys-tiles");
     host.textContent = "";
-    if (o.wifi && s.wifi !== null) {
-      host.appendChild(toggleTile("wifi", "Wi-Fi", "wifi", s.wifi, s.wifi ? s.network || "On" : "Off"));
+    if (o.wifi) {
+      host.appendChild(
+        s.wifi === null
+          ? unavailableTile("wifi", "Wi-Fi", "Unavailable")
+          : toggleTile("wifi", "Wi-Fi", "wifi", s.wifi, s.wifi ? s.network || "On" : "Off")
+      );
     }
-    if (o.bluetooth && s.bluetooth !== null) host.appendChild(toggleTile("bluetooth", "Bluetooth", "bluetooth", s.bluetooth));
+    if (o.bluetooth) {
+      host.appendChild(
+        s.bluetooth === null
+          ? unavailableTile("bluetooth", "Bluetooth", "Unavailable")
+          : toggleTile("bluetooth", "Bluetooth", "bluetooth", s.bluetooth)
+      );
+    }
     if (o.airplane && (s.wifi !== null || s.bluetooth !== null)) {
       const airplane = !s.wifi && !s.bluetooth;
       host.appendChild(
@@ -104,7 +122,9 @@
         })
       );
     }
-    if (o.mic && s.mic_muted !== null) {
+    if (o.mic && s.mic_muted === null) {
+      host.appendChild(unavailableTile("mic", "Microphone", "Unavailable"));
+    } else if (o.mic) {
       host.appendChild(
         tile({
           icon: s.mic_muted ? "micOff" : "mic",
@@ -156,7 +176,10 @@
     const input = row.querySelector("input");
     const pct = row.querySelector(".pct");
     input.value = value;
-    pct.textContent = `${value}%`;
+    pct.textContent = off ? "Muted" : `${value}%`;
+    // Muted: the slider is locked until the sound is switched back on (click the icon).
+    input.disabled = !!off;
+    row.classList.toggle("muted", !!off);
     if (onIcon) row.querySelector("button").addEventListener("click", onIcon);
     input.addEventListener("pointerdown", () => (busy = true));
     const done = () => (busy = false);
@@ -180,7 +203,7 @@
       host.appendChild(
         slider({
           id: "volume",
-          icon: "volume",
+          icon: s.volume === 0 ? "mute" : "volume",
           iconOff: "mute",
           value: s.volume,
           off: s.muted,
@@ -218,8 +241,11 @@
     host.textContent = "";
     if (!o.battery || s.battery === null) return;
     const note = s.charging ? "Charging" : s.saver ? "Battery saver" : "";
-    host.innerHTML = `<span class="sys-ico">${ICONS.battery}</span><span>${s.battery}%</span>
-      <span class="bar"><i class="${s.battery <= 20 && !s.charging ? "low" : ""}" style="width:${s.battery}%"></i></span><small>${note}</small>`;
+    // Colour follows the charge: green when full, through yellow and orange to red when low.
+    const hue = Math.round(Math.min(1, Math.max(0, (s.battery - 10) / 55)) * 120);
+    const color = `hsl(${hue} 85% 58%)`;
+    host.innerHTML = `<span class="sys-ico" style="color:${color}">${ICONS.battery}</span><span style="color:${color};font-weight:650">${s.battery}%</span>
+      <span class="bar"><i style="width:${s.battery}%;background:${color}"></i></span><small>${note}</small>`;
   }
 
   /* --- refresh loop --------------------------------------------------- */

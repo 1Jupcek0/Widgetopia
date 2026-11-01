@@ -12,6 +12,7 @@ use std::{
 mod claude;
 mod herdr;
 mod media;
+mod perf;
 mod system;
 
 use serde::Deserialize;
@@ -378,7 +379,8 @@ pub fn run() {
             system::sys_brightness,
             herdr::herdr_agents,
             herdr::herdr_open,
-            claude::claude_stats
+            claude::claude_stats,
+            perf::perf_status
         ])
         .setup(|app| {
             let win = app.get_webview_window("main").expect("main window missing");

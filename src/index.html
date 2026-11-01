@@ -135,6 +135,15 @@
       </div>
     </section>
 
+    <!-- Performance: CPU / GPU / RAM / disk / network load and temperatures -->
+    <section class="widget glass perf" id="perf" data-id="perf" data-title="Performance" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="pf-head"><b>Performance</b></div>
+        <div class="pf-rows" id="pf-rows"></div>
+      </div>
+    </section>
+
     <!-- Settings panel (opened from the right-click menu or the tray) -->
     <section class="widget glass hidden" id="settings" data-id="settings" data-interactive>
       <div class="glass-clip"><div class="glass-bg"></div></div>
@@ -175,7 +184,7 @@
             <input type="checkbox" id="icons-toggle" class="switch" />
           </label>
           <p class="hint">
-            The glass also refracts the icons on the desktop. <b class="warn">Hardcore on performance</b>: needs a
+            The glass also refracts the icons on the desktop. <b class="warn">Heavy on performance</b>: needs a
             continuous screen capture even when nothing moves. Leave it off unless you really want it.
           </p>
         </div>
@@ -196,5 +205,6 @@
     <script src="panels/system.js"></script>
     <script src="panels/herdr.js"></script>
     <script src="panels/claude.js"></script>
+    <script src="panels/perf.js"></script>
   </body>
 </html>

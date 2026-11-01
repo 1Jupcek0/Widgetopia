@@ -34,7 +34,7 @@ mod imp {
         Win32::{
             Foundation::{LPARAM, WPARAM},
             Media::Audio::{
-                eCapture, eConsole, eRender, Endpoints::IAudioEndpointVolume, IMMDeviceEnumerator, MMDeviceEnumerator,
+                eCapture, eCommunications, eConsole, eRender, DEVICE_STATE_ACTIVE, Endpoints::IAudioEndpointVolume, IMMDeviceEnumerator, MMDeviceEnumerator,
                 EDataFlow,
             },
             System::{
@@ -111,12 +111,39 @@ mod imp {
 
     /* --- audio ------------------------------------------------------- */
 
-    fn endpoint(flow: EDataFlow) -> Option<IAudioEndpointVolume> {
+    /// Volume controls of the default endpoint(s). For the microphone the default device can be
+    /// something that is not connected (e.g. headphones that are switched off), so when no default
+    /// works, every active capture device is used instead.
+    fn endpoints(flow: EDataFlow) -> Vec<IAudioEndpointVolume> {
+        let mut out = Vec::new();
         unsafe {
-            let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
-            let device = enumerator.GetDefaultAudioEndpoint(flow, eConsole).ok()?;
-            device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None).ok()
+            let Ok(enumerator) = CoCreateInstance::<_, IMMDeviceEnumerator>(&MMDeviceEnumerator, None, CLSCTX_ALL) else {
+                return out;
+            };
+            for role in [eConsole, eCommunications] {
+                if let Ok(device) = enumerator.GetDefaultAudioEndpoint(flow, role) {
+                    if let Ok(v) = device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None) {
+                        out.push(v);
+                    }
+                }
+            }
+            if out.is_empty() && flow == eCapture {
+                if let Ok(devices) = enumerator.EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE) {
+                    for i in 0..devices.GetCount().unwrap_or(0) {
+                        if let Ok(device) = devices.Item(i) {
+                            if let Ok(v) = device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None) {
+                                out.push(v);
+                            }
+                        }
+                    }
+                }
+            }
         }
+        out
+    }
+
+    fn endpoint(flow: EDataFlow) -> Option<IAudioEndpointVolume> {
+        endpoints(flow).into_iter().next()
     }
 
     fn set_volume(percent: u8) -> bool {
@@ -125,8 +152,11 @@ mod imp {
     }
 
     fn set_mute(flow: EDataFlow, muted: bool) -> bool {
-        let Some(v) = endpoint(flow) else { return false };
-        unsafe { v.SetMute(muted, std::ptr::null()).is_ok() }
+        let mut ok = false;
+        for v in endpoints(flow) {
+            ok |= unsafe { v.SetMute(muted, std::ptr::null()).is_ok() };
+        }
+        ok
     }
 
     /* --- registry / power / shell ----------------------------------- */
@@ -283,8 +313,9 @@ mod imp {
                 s.muted = v.GetMute().map(|b| b.as_bool()).unwrap_or(false);
             }
         }
-        if let Some(v) = endpoint(eCapture) {
-            s.mic_muted = unsafe { v.GetMute().map(|b| b.as_bool()).ok() };
+        let mics = endpoints(eCapture);
+        if !mics.is_empty() {
+            s.mic_muted = Some(mics.iter().all(|v| unsafe { v.GetMute().map(|b| b.as_bool()).unwrap_or(false) }));
         }
         s
     }

@@ -953,7 +953,8 @@ body.can-resize .resize-grip {
 }
 .sys-tiles {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, ..): a long label must not widen its column and push the panel out of shape */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
 }
 .sys-tiles:empty,
@@ -963,6 +964,7 @@ body.can-resize .resize-grip {
   display: none;
 }
 .tile {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1076,6 +1078,16 @@ body.can-resize .resize-grip {
 }
 .sys-ico.off {
   opacity: 0.55;
+}
+.sys-slider.muted input[type="range"] {
+  opacity: 0.35;
+}
+.sys-slider .pct {
+  min-width: 44px;
+}
+.tile.na {
+  opacity: 0.4;
+  cursor: default;
 }
 .sys-slider input[type="range"] {
   flex: 1;
@@ -1325,4 +1337,104 @@ body.can-resize .resize-grip {
 }
 .cl-day span {
   opacity: 0.65;
+}
+
+.cl-chart[hidden],
+.clock .date[hidden] {
+  display: none;
+}
+
+.weather.no-forecast {
+  height: 168px;
+}
+.weather.no-forecast .wx-days {
+  display: none;
+}
+
+/* ---------- Performance ---------- */
+
+.perf {
+  width: 340px;
+}
+.perf .glass-content {
+  padding: 18px 20px 16px;
+}
+.pf-head {
+  margin: 0 2px 10px;
+}
+.pf-head b {
+  font-size: 17px;
+  font-weight: 650;
+}
+.pf-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.pf-row .top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+.pf-row .name {
+  font-weight: 650;
+  min-width: 44px;
+}
+.pf-row .value {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.pf-row .temp {
+  min-width: 46px;
+  padding: 1px 7px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 650;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.16);
+  font-variant-numeric: tabular-nums;
+}
+.pf-row .temp.warm {
+  background: rgba(255, 179, 71, 0.4);
+}
+.pf-row .temp.hot {
+  background: rgba(255, 107, 94, 0.55);
+}
+.pf-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+.pf-bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  transform-origin: 0 50%;
+  background: #7aa7ff;
+}
+.pf-bar i.warm {
+  background: #ffb347;
+}
+.pf-bar i.hot {
+  background: #ff6b5e;
+}
+.pf-net {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.pf-net span:first-child {
+  font-weight: 650;
+}
+
+.tile .txt b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

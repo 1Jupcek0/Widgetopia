@@ -15,8 +15,11 @@ const DEFAULT_POSITIONS = {
   clock: { x: 60, y: 50 },
   weather: { x: 70, y: 240 },
   media: { x: 70, y: 540 },
-  system: { x: 500, y: 240 },
-  settings: { x: 900, y: 60 },
+  system: { x: 470, y: 240 },
+  perf: { x: 470, y: 690 },
+  herdr: { x: 860, y: 60 },
+  claude: { x: 860, y: 420 },
+  settings: { x: 500, y: 60 },
 };
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.5;
