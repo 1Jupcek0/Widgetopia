@@ -258,6 +258,9 @@ mod imp {
             st.nvml_tried = true;
             st.nvml = load_nvml();
         }
+        // NVML gives the temperature (and the load while the GPU is awake). When the GPU goes to
+        // sleep NVML stops answering the load query, so the Windows engine counters take over;
+        // they never wake the GPU.
         if let Some(n) = &st.nvml {
             unsafe {
                 let mut u = NvmlUtilization::default();
@@ -269,7 +272,8 @@ mod imp {
                     out.gpu_temp = Some(t as f32);
                 }
             }
-        } else if st.query != 0 {
+        }
+        if out.gpu.is_none() && st.query != 0 {
             let sum: f64 = array_values(st.gpu).iter().sum();
             out.gpu = Some(sum.clamp(0.0, 100.0) as f32);
         }

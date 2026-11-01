@@ -12,6 +12,7 @@
   let timer = 0;
   let lastKey = "";
   let samples = 0;
+  let lastGpu = null;
 
   const level = (value, warm, hot) => (value >= hot ? "hot" : value >= warm ? "warm" : "");
 
@@ -54,7 +55,9 @@
     const host = $("pf-rows");
     host.textContent = "";
     if (opt("perf", "cpu")) host.appendChild(loadRow("CPU", s.cpu, `${Math.round(s.cpu)}%`, s.cpu_temp));
-    if (opt("perf", "gpu") && s.gpu !== null) host.appendChild(loadRow("GPU", s.gpu, `${Math.round(s.gpu)}%`, s.gpu_temp));
+    // Never let the row blink in and out: if a sample has no GPU load, keep showing the last one.
+    if (s.gpu !== null) lastGpu = s.gpu;
+    if (opt("perf", "gpu") && lastGpu !== null) host.appendChild(loadRow("GPU", lastGpu, `${Math.round(lastGpu)}%`, s.gpu_temp));
     if (opt("perf", "ram")) {
       host.appendChild(loadRow("RAM", s.ram_percent, `${s.ram_used_gb.toFixed(1)} / ${s.ram_total_gb.toFixed(1)} GB`));
     }
