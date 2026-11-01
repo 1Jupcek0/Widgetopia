@@ -1438,3 +1438,148 @@ body.can-resize .resize-grip {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------- Quick launch ---------- */
+
+.launcher {
+  width: 372px;
+  --cols: 4;
+}
+.launcher .glass-content {
+  padding: 16px 16px 14px;
+}
+.ql-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 6px 10px;
+}
+.ql-head b {
+  font-size: 17px;
+  font-weight: 650;
+}
+.ql-head span {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.ql-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 6px;
+}
+.ql-item,
+.ql-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 4px 8px;
+  border-radius: 18px;
+  background: transparent;
+  box-shadow: none;
+  transition: background 0.2s;
+}
+.ql-item:hover,
+.ql-add:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.ql-item.launched {
+  background: rgba(91, 227, 125, 0.3);
+}
+.ql-item.fail {
+  background: rgba(255, 107, 94, 0.4);
+}
+.ql-ico {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ql-ico img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+.ql-ico svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+.ql-name {
+  width: 100%;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.launcher.no-names .ql-name {
+  display: none;
+}
+.ql-add .ql-ico {
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  margin: 4px 0;
+}
+.ql-add .ql-ico svg {
+  width: 20px;
+  height: 20px;
+}
+.ql-empty {
+  grid-column: 1 / -1;
+  padding: 6px 8px 10px;
+  font-size: 12.5px;
+  text-align: center;
+  opacity: 0.65;
+}
+.launcher.dropping {
+  box-shadow:
+    0 0 0 3px rgba(122, 167, 255, 0.9),
+    0 18px 40px rgba(0, 0, 0, 0.28);
+}
+.ql-add-row {
+  display: none;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.launcher.adding .ql-add-row {
+  display: flex;
+}
+.ql-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 0;
+  outline: none;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+  user-select: text;
+}
+.ql-add-row input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+.ql-add-row button {
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  border-radius: 12px;
+}

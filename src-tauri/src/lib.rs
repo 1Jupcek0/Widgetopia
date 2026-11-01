@@ -11,6 +11,7 @@ use std::{
 
 mod claude;
 mod herdr;
+mod launcher;
 mod media;
 mod perf;
 mod system;
@@ -380,7 +381,10 @@ pub fn run() {
             herdr::herdr_agents,
             herdr::herdr_open,
             claude::claude_stats,
-            perf::perf_status
+            perf::perf_status,
+            launcher::launch_item,
+            launcher::reveal_item,
+            launcher::item_icon
         ])
         .setup(|app| {
             let win = app.get_webview_window("main").expect("main window missing");

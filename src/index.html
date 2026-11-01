@@ -144,6 +144,20 @@
       </div>
     </section>
 
+    <!-- Quick launch: apps, files, folders and links you pick; one click opens them -->
+    <section class="widget glass launcher" id="launcher" data-id="launcher" data-title="Quick launch" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="ql-head"><b>Quick launch</b><span id="ql-hint"></span></div>
+        <div class="ql-add-row" id="ql-add-row">
+          <input type="text" id="ql-input" placeholder="Path or link (https://…, C:\u2026)" autocomplete="off" spellcheck="false" />
+          <button type="button" id="ql-add-ok">Add</button>
+          <button type="button" id="ql-add-cancel">Cancel</button>
+        </div>
+        <div class="ql-grid" id="ql-grid"></div>
+      </div>
+    </section>
+
     <!-- Settings panel (opened from the right-click menu or the tray) -->
     <section class="widget glass hidden" id="settings" data-id="settings" data-interactive>
       <div class="glass-clip"><div class="glass-bg"></div></div>
@@ -206,5 +220,6 @@
     <script src="panels/herdr.js"></script>
     <script src="panels/claude.js"></script>
     <script src="panels/perf.js"></script>
+    <script src="panels/launcher.js"></script>
   </body>
 </html>

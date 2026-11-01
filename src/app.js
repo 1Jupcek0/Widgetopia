@@ -19,6 +19,7 @@ const DEFAULT_POSITIONS = {
   perf: { x: 470, y: 690 },
   herdr: { x: 860, y: 60 },
   claude: { x: 860, y: 420 },
+  launcher: { x: 1300, y: 60 },
   settings: { x: 500, y: 60 },
 };
 const MIN_SCALE = 0.5;
@@ -79,6 +80,7 @@ function loadState() {
     opts: {},
     weather: null,
     weatherCache: null,
+    launcher: { items: [] },
   };
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -94,6 +96,7 @@ function loadState() {
         opts: raw.opts || {},
         weather: raw.weather || null,
         weatherCache: raw.weatherCache || null,
+        launcher: raw.launcher && Array.isArray(raw.launcher.items) ? raw.launcher : { items: [] },
       };
       // Migrate the old global Fahrenheit switch to the weather panel options.
       if (raw.fahrenheit && s.opts.weather?.fahrenheit === undefined) {
@@ -394,6 +397,7 @@ function cycleChoice(panelId, o) {
 
 const ctx = document.getElementById("ctx");
 let ctxPanel = null;
+let ctxTarget = null; // the element that was right-clicked (panels can add item-specific actions)
 let ctxPos = { x: 0, y: 0 };
 
 function menuButton(label, { checked, value, run, keepOpen } = {}) {
@@ -426,6 +430,11 @@ function renderMenu() {
   ctx.textContent = "";
   const panel = PANELS[ctxPanel];
   let any = false;
+  for (const a of panel?.contextActions?.(ctxTarget) || []) {
+    any = true;
+    ctx.appendChild(menuButton(a.label, { run: a.run }));
+  }
+  if (any) ctx.appendChild(document.createElement("hr"));
   for (const o of panel?.options || []) {
     any = true;
     if (o.type === "toggle") {
@@ -453,8 +462,9 @@ function renderMenu() {
   ctx.style.top = `${Math.max(8, Math.min(ctxPos.y, window.innerHeight - h - 8))}px`;
 }
 
-function openMenu(panelId, x, y) {
+function openMenu(panelId, x, y, target = null) {
   ctxPanel = panelId;
+  ctxTarget = target;
   ctxPos = { x, y };
   ctx.classList.remove("hidden");
   renderMenu();
@@ -473,7 +483,7 @@ for (const el of widgets) {
   el.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    openMenu(el.dataset.id, e.clientX, e.clientY);
+    openMenu(el.dataset.id, e.clientX, e.clientY, e.target);
   });
 }
 document.addEventListener("contextmenu", (e) => {
