@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
+    "test": "node --test tests/ics.test.js",
     "tauri": "tauri"
   },
   "devDependencies": {

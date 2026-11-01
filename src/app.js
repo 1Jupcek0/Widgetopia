@@ -20,6 +20,7 @@ const DEFAULT_POSITIONS = {
   herdr: { x: 860, y: 60 },
   claude: { x: 860, y: 420 },
   launcher: { x: 1300, y: 60 },
+  calendar: { x: 1300, y: 330 },
   settings: { x: 500, y: 60 },
 };
 const MIN_SCALE = 0.5;
@@ -81,6 +82,7 @@ function loadState() {
     weather: null,
     weatherCache: null,
     launcher: { items: [] },
+    calendar: {},
   };
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -97,6 +99,7 @@ function loadState() {
         weather: raw.weather || null,
         weatherCache: raw.weatherCache || null,
         launcher: raw.launcher && Array.isArray(raw.launcher.items) ? raw.launcher : { items: [] },
+        calendar: raw.calendar || {},
       };
       // Migrate the old global Fahrenheit switch to the weather panel options.
       if (raw.fahrenheit && s.opts.weather?.fahrenheit === undefined) {

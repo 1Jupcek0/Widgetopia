@@ -158,6 +158,28 @@
       </div>
     </section>
 
+    <!-- Calendar: local Outlook and ICS links -->
+    <section class="widget glass calendar" id="calendar" data-id="calendar" data-title="Calendar" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="cal-head">
+          <b>Calendar</b>
+          <span id="cal-sub"></span>
+          <button type="button" id="cal-refresh" class="icon-btn" title="Refresh">&#8635;</button>
+          <button type="button" id="cal-gear" class="icon-btn" title="Calendars">&#9881;</button>
+        </div>
+        <div class="cal-list" id="cal-list"></div>
+        <div class="cal-sources">
+          <div id="cal-sources-list"></div>
+          <div class="cal-add">
+            <input type="text" id="cal-url" placeholder="https://… .ics or webcal://…" autocomplete="off" spellcheck="false" />
+            <button type="button" id="cal-add">Add</button>
+          </div>
+          <button type="button" id="cal-done" class="cal-done">Done</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Settings panel (opened from the right-click menu or the tray) -->
     <section class="widget glass hidden" id="settings" data-id="settings" data-interactive>
       <div class="glass-clip"><div class="glass-bg"></div></div>
@@ -221,5 +243,7 @@
     <script src="panels/claude.js"></script>
     <script src="panels/perf.js"></script>
     <script src="panels/launcher.js"></script>
+    <script src="panels/ics.js"></script>
+    <script src="panels/calendar.js"></script>
   </body>
 </html>

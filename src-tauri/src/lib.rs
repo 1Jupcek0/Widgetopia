@@ -9,6 +9,7 @@ use std::{
     time::Duration,
 };
 
+mod calendar;
 mod claude;
 mod herdr;
 mod launcher;
@@ -384,7 +385,11 @@ pub fn run() {
             perf::perf_status,
             launcher::launch_item,
             launcher::reveal_item,
-            launcher::item_icon
+            launcher::item_icon,
+            calendar::outlook_calendars,
+            calendar::outlook_events,
+            calendar::outlook_running,
+            calendar::fetch_text
         ])
         .setup(|app| {
             let win = app.get_webview_window("main").expect("main window missing");

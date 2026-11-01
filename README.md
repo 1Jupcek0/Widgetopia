@@ -20,6 +20,7 @@ window per widget.
 - Agents panel for [herdr](https://herdr.dev): working / idle / done state of every agent pane; click opens the agent and brings its terminal to the front
 - Claude usage panel: 5 h / weekly limits and 7-day token statistics (see below)
 - Quick launch panel: drop apps, files, folders or links onto it (or type a path/link); one click opens them like Explorer would, right-click an item for Open / Show in folder / Move / Remove
+- Calendar panel: events from the local classic Outlook (read through its automation interface while it is running, several accounts/calendars selectable) and any number of ICS / webcal links; countdown, all-day events, meeting join links
 - Performance panel: CPU, GPU, RAM, disk, network and the temperatures Windows exposes (ACPI thermal zone, NVIDIA GPU sensor)
 - Quick settings panel: Wi-Fi, Bluetooth, airplane mode, power mode, volume, microphone mute, brightness, dark mode, battery, lock; every tile is optional
 - Layout tools (Settings -> Layout): grid overlay, snap to grid / screen centre / edges / other panels with alignment guides, proportional resizing with a corner grip (double-click resets), optionally allowed while locked
@@ -57,6 +58,7 @@ npm run build
 | Wi-Fi, Bluetooth, power mode, audio, ... | `src-tauri/src/system.rs` |
 | CPU / GPU / RAM / disk / network, temperatures | `src-tauri/src/perf.rs` |
 | Quick launch (open items, shell icons) | `src-tauri/src/launcher.rs` |
+| Calendar (Outlook COM, ICS download) | `src-tauri/src/calendar.rs`, `src/panels/ics.js` |
 | herdr agents | `src-tauri/src/herdr.rs` |
 | Claude usage statistics | `src-tauri/src/claude.rs` |
 
@@ -74,6 +76,10 @@ Token statistics are read from Claude Code's transcripts in `~/.claude/projects`
 ```powershell
 try { if ($o.rate_limits) { [pscustomobject]@{ updated = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds(); rate_limits = $o.rate_limits } | ConvertTo-Json -Depth 6 -Compress | Set-Content -Path (Join-Path $env:USERPROFILE ".claude\widgetopia-usage.json") -Encoding utf8 } } catch {}
 ```
+
+## Tests
+
+The ICS reader has unit tests: `npm test`.
 
 ## Performance
 
