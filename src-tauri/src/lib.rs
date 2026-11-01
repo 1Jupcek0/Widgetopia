@@ -10,6 +10,7 @@ use std::{
 };
 
 mod media;
+mod system;
 
 use serde::Deserialize;
 use tauri::{
@@ -300,7 +301,10 @@ pub fn run() {
             media::media_thumbnail,
             media::media_control,
             media::media_seek,
-            media::media_watch
+            media::media_watch,
+            system::sys_status,
+            system::sys_set,
+            system::sys_brightness
         ])
         .setup(|app| {
             let win = app.get_webview_window("main").expect("main window missing");
