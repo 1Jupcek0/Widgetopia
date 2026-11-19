@@ -11,21 +11,25 @@ const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 const STORAGE_KEY = "widgetopia.state.v1";
+/* Defaults of a fresh install (positions are for a 1920x1080 screen; they are clamped on smaller ones). */
 const DEFAULT_POSITIONS = {
-  clock: { x: 60, y: 50 },
-  weather: { x: 70, y: 240 },
-  media: { x: 70, y: 540 },
-  system: { x: 470, y: 240 },
-  perf: { x: 470, y: 690 },
-  herdr: { x: 860, y: 60 },
-  claude: { x: 860, y: 420 },
-  launcher: { x: 1300, y: 60 },
-  calendar: { x: 1300, y: 330 },
-  notes: { x: 1300, y: 700 },
-  timer: { x: 1620, y: 60 },
+  clock: { x: 770, y: 423 },
+  weather: { x: 1574, y: 10 },
+  media: { x: 1575, y: 571 },
+  system: { x: 1576, y: 800 },
+  perf: { x: 0, y: 233 },
+  herdr: { x: 0, y: 212 },
+  claude: { x: 0, y: 10 },
+  launcher: { x: 1614, y: 253 },
+  calendar: { x: 0, y: 559 },
+  notes: { x: 0, y: 701 },
+  timer: { x: 1103, y: 204 },
   clipboard: { x: 860, y: 780 },
-  settings: { x: 500, y: 60 },
+  settings: { x: 260, y: 261 },
 };
+const DEFAULT_SCALES = { herdr: 0.9, launcher: 0.72, media: 0.88, weather: 0.88, calendar: 0.84, perf: 0.85 };
+/** Panels that are off on a fresh install (switch them on in Settings -> Panels). */
+const DEFAULT_ENABLED = { herdr: false, claude: false, launcher: false, calendar: false, timer: false, clipboard: false };
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.5;
 const DEFAULT_GLASS = { blur: 4, refraction: 36 };
@@ -81,7 +85,7 @@ function syncOptionRows(panelId) {
 }
 
 function isEnabled(id) {
-  return state.enabled[id] !== false;
+  return state.enabled[id] ?? DEFAULT_ENABLED[id] ?? true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -103,6 +107,7 @@ function loadState() {
     calendar: {},
     notes: { tasks: [], text: "" },
     profiles: {},
+    defaultsApplied: true,
   };
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -123,6 +128,11 @@ function loadState() {
         notes: raw.notes && Array.isArray(raw.notes.tasks) ? { text: "", ...raw.notes } : { tasks: [], text: "" },
         profiles: raw.profiles || {},
       };
+      // Profiles from before the defaults existed had every panel on: keep it that way once.
+      if (!raw.defaultsApplied) {
+        for (const [id, on] of Object.entries(DEFAULT_ENABLED)) if (!on && s.enabled[id] === undefined) s.enabled[id] = true;
+      }
+      s.defaultsApplied = true;
       // Migrate the old global Fahrenheit switch to the weather panel options.
       if (raw.fahrenheit && s.opts.weather?.fahrenheit === undefined) {
         (s.opts.weather ||= {}).fahrenheit = true;
@@ -175,7 +185,7 @@ const storedPos = (el) => ({ x: el._pos.x - posOffset.x, y: el._pos.y - posOffse
 
 function restorePositions() {
   for (const el of widgets) {
-    setScale(el, state.scales[el.dataset.id] || 1);
+    setScale(el, state.scales[el.dataset.id] || DEFAULT_SCALES[el.dataset.id] || 1);
     const p = state.positions[el.dataset.id] || DEFAULT_POSITIONS[el.dataset.id] || { x: 100, y: 100 };
     setPosition(el, p.x + posOffset.x, p.y + posOffset.y);
   }
@@ -358,7 +368,7 @@ for (const el of widgets) {
     grip.addEventListener("pointercancel", onUp);
   });
   grip.addEventListener("dblclick", () => {
-    setScale(el, 1);
+    setScale(el, DEFAULT_SCALES[el.dataset.id] || 1);
     delete state.scales[el.dataset.id];
     saveState();
     updateHitRegions();
@@ -391,7 +401,7 @@ function setLocked(locked) {
 registerPanel("layout", {
   options: [
     { key: "grid", label: "Show grid (unlocked)", type: "toggle", def: false },
-    { key: "snapGrid", label: "Snap to grid", type: "toggle", def: false },
+    { key: "snapGrid", label: "Snap to grid", type: "toggle", def: true },
     { key: "snapGuides", label: "Snap to centre & edges", type: "toggle", def: true },
     {
       key: "gridSize",
@@ -407,7 +417,7 @@ registerPanel("layout", {
     },
     { key: "resize", label: "Allow resizing", type: "toggle", def: true },
     { key: "resizeLocked", label: "Resize while locked", type: "toggle", def: false },
-    { key: "hotkey", label: "Global shortcut: show / hide widgets", type: "toggle", def: true },
+    { key: "hotkey", label: "Global shortcut: show / hide widgets", type: "toggle", def: false },
     {
       key: "hotkeyKeys",
       label: "Shortcut",

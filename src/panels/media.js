@@ -318,7 +318,7 @@
         key: "priority",
         label: "Source priority",
         type: "choice",
-        def: "auto",
+        def: "spotify",
         choices: [
           ["auto", "Newest playing"],
           ["spotify", "Spotify first"],

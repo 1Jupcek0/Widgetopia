@@ -87,7 +87,7 @@
   registerPanel("clipboard", {
     options: [
       { key: "record", label: "Record clipboard", type: "toggle", def: false },
-      { key: "max", label: "Items to keep", type: "choice", def: "15", choices: ["5", "10", "15", "25", "40"].map((v) => [v, v]) },
+      { key: "max", label: "Items to keep", type: "choice", def: "5", choices: ["5", "10", "15", "25", "40"].map((v) => [v, v]) },
     ],
     actions: [
       {

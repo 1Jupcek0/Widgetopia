@@ -305,7 +305,7 @@
       toggle("power", "Power mode", true),
       toggle("volume", "Volume", true),
       toggle("mic", "Microphone mute", false),
-      toggle("brightness", "Brightness", true),
+      toggle("brightness", "Brightness", false),
       toggle("dark", "Dark mode", false),
       toggle("battery", "Battery", true),
       toggle("lock", "Lock PC", false),

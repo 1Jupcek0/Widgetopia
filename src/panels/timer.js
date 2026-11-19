@@ -148,8 +148,8 @@
 
   registerPanel("timer", {
     options: [
-      { key: "work", label: "Focus length", type: "choice", def: "25", choices: ["15", "20", "25", "30", "45", "50", "60"].map((v) => [v, `${v} min`]) },
-      { key: "rest", label: "Break length", type: "choice", def: "5", choices: ["3", "5", "10", "15", "20"].map((v) => [v, `${v} min`]) },
+      { key: "work", label: "Focus length", type: "choice", def: "30", choices: ["15", "20", "25", "30", "45", "50", "60"].map((v) => [v, `${v} min`]) },
+      { key: "rest", label: "Break length", type: "choice", def: "15", choices: ["3", "5", "10", "15", "20"].map((v) => [v, `${v} min`]) },
       { key: "length", label: "Timer length", type: "choice", def: "10", choices: ["1", "3", "5", "10", "15", "30", "45", "60", "90"].map((v) => [v, `${v} min`]) },
       { key: "auto", label: "Start the next phase automatically", type: "toggle", def: false, when: () => mode === "pomodoro" },
       { key: "notify", label: "Notification when done", type: "toggle", def: true },

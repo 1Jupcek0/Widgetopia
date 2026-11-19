@@ -108,7 +108,7 @@
         key: "face",
         label: "Analog dial",
         type: "choice",
-        def: "marks",
+        def: "numbers",
         when: () => opt("clock", "style") === "analog",
         choices: [
           ["marks", "Tick marks"],

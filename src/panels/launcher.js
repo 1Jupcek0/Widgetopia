@@ -216,7 +216,7 @@
         key: "cols",
         label: "Columns",
         type: "choice",
-        def: "4",
+        def: "3",
         choices: [
           ["3", "3"],
           ["4", "4"],

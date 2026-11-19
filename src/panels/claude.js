@@ -110,7 +110,7 @@
   registerPanel("claude", {
     options: [
       { key: "limits", label: "Show 5 h / week limits", type: "toggle", def: true },
-      { key: "chart", label: "Show 7-day chart", type: "toggle", def: true },
+      { key: "chart", label: "Show 7-day chart", type: "toggle", def: false },
     ],
     onOption: () => {
       lastKey = "";
