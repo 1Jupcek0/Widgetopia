@@ -166,11 +166,18 @@ function setPosition(el, x, y) {
   el._pos = { x, y };
 }
 
+/**
+ * Saved positions are relative to the main monitor, so the layout stays where it was when the overlay
+ * is stretched over all monitors: there the main monitor is not at (0, 0) of the overlay any more.
+ */
+let posOffset = { x: 0, y: 0 };
+const storedPos = (el) => ({ x: el._pos.x - posOffset.x, y: el._pos.y - posOffset.y });
+
 function restorePositions() {
   for (const el of widgets) {
     setScale(el, state.scales[el.dataset.id] || 1);
     const p = state.positions[el.dataset.id] || DEFAULT_POSITIONS[el.dataset.id] || { x: 100, y: 100 };
-    setPosition(el, p.x, p.y);
+    setPosition(el, p.x + posOffset.x, p.y + posOffset.y);
   }
 }
 
@@ -236,8 +243,10 @@ function snapPosition(el, x, y) {
     y = Math.round(y / g) * g;
   }
   if (opt("layout", "snapGuides")) {
-    const xs = [0, window.innerWidth / 2, window.innerWidth];
-    const ys = [0, window.innerHeight / 2, window.innerHeight];
+    // Edges and centres of the screen (of every monitor when the overlay spans several).
+    const screens = wallpaperRects || [{ x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }];
+    const xs = screens.flatMap((r) => [r.x, r.x + r.w / 2, r.x + r.w]);
+    const ys = screens.flatMap((r) => [r.y, r.y + r.h / 2, r.y + r.h]);
     for (const other of widgets) {
       if (other === el || other.classList.contains("hidden") || other.classList.contains("off")) continue;
       const o = sizeOf(other);
@@ -301,7 +310,7 @@ for (const el of widgets) {
       el.classList.remove("dragging");
       dragging = false;
       showGuides(null, null);
-      state.positions[el.dataset.id] = { ...el._pos };
+      state.positions[el.dataset.id] = storedPos(el);
       saveState();
       updateHitRegions();
     };
@@ -340,7 +349,7 @@ for (const el of widgets) {
       el.classList.remove("resizing");
       dragging = false;
       state.scales[el.dataset.id] = el._scale;
-      state.positions[el.dataset.id] = { ...el._pos };
+      state.positions[el.dataset.id] = storedPos(el);
       saveState();
       updateHitRegions();
     };
@@ -1156,9 +1165,12 @@ async function applyMonitor(value) {
     const top = Math.min(...monitors.map((m) => m.y));
     const dpr = window.devicePixelRatio || 1;
     wallpaperRects = monitors.map((m) => ({ x: (m.x - left) / dpr, y: (m.y - top) / dpr, w: m.width / dpr, h: m.height / dpr }));
+    const main = monitors.findIndex((m) => m.primary);
+    posOffset = main >= 0 ? { x: wallpaperRects[main].x, y: wallpaperRects[main].y } : { x: 0, y: 0 };
     await invoke("set_monitor", { index: -1 });
   } else {
     wallpaperRects = null;
+    posOffset = { x: 0, y: 0 };
     await invoke("set_monitor", { index: Number(value) });
   }
   await new Promise((r) => setTimeout(r, 350)); // let the webview adopt the new size
