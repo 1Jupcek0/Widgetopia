@@ -11,7 +11,7 @@ window per widget.
 - Transparent overlay attached to the desktop: stays under all windows and survives `Win + D` (show desktop)
 - Click-through everywhere except over widgets (hit-testing runs in Rust at ~30 Hz)
 - Draggable widgets with a lock option; positions are remembered
-- Clock widget with seconds and a readable text shadow
+- Clock widget: digital or analog (tick marks, numbers or bare dial), optional seconds, 12/24 h and date, readable on any wallpaper
 - Weather widget (current conditions + 5-day forecast) powered by [Open-Meteo](https://open-meteo.com), no API key needed; search for any city, optional Fahrenheit
 - "Liquid glass" demo card: the wallpaper is blurred and refracted at the rim via an SVG displacement filter
 - Optional "Bring to front on click" mode (Settings): a click raises the widgets above windows and the glass blurs/refracts those windows too (live screen capture, ~15 fps, only while a window is behind a widget)

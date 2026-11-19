@@ -20,6 +20,14 @@
       <div class="time">
         <span class="hm" id="clock-hm">00:00</span><span class="sec" id="clock-sec">:00</span>
       </div>
+      <svg class="analog" id="clock-analog" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="face" cx="100" cy="100" r="96" />
+        <g id="clock-marks"></g>
+        <line class="hand hour" id="hand-h" x1="100" y1="100" x2="100" y2="58" />
+        <line class="hand min" id="hand-m" x1="100" y1="100" x2="100" y2="34" />
+        <line class="hand sec" id="hand-s" x1="100" y1="112" x2="100" y2="26" />
+        <circle class="pin" cx="100" cy="100" r="4.5" />
+      </svg>
       <div class="date" id="clock-date"></div>
     </section>
 

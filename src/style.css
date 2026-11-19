@@ -1814,3 +1814,62 @@ button.cal-ev:hover {
 .ql-add-row input {
   flex: 1 1 100%;
 }
+
+/* ---------- Analog clock ---------- */
+
+.clock .analog {
+  display: none;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  overflow: visible;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.45));
+}
+.clock.analog-mode .analog {
+  display: block;
+}
+.clock.analog-mode .time {
+  display: none;
+}
+.clock.analog-mode .date {
+  margin-top: 8px;
+  padding-left: 0;
+  text-align: center;
+}
+.analog .face {
+  fill: rgba(10, 14, 28, 0.35);
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 2;
+}
+.analog.no-face .face {
+  fill: none;
+  stroke: none;
+}
+.analog .mark {
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-linecap: round;
+}
+.analog .num {
+  fill: #fff;
+  font: 600 17px "Inter", sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.analog .hand {
+  stroke: #fff;
+  stroke-linecap: round;
+  transform-origin: 100px 100px;
+}
+.analog .hand.hour {
+  stroke-width: 6;
+}
+.analog .hand.min {
+  stroke-width: 4;
+}
+.analog .hand.sec {
+  stroke: #ff6b5e;
+  stroke-width: 2;
+}
+.analog .pin {
+  fill: #ff6b5e;
+}
