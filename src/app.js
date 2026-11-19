@@ -21,6 +21,9 @@ const DEFAULT_POSITIONS = {
   claude: { x: 860, y: 420 },
   launcher: { x: 1300, y: 60 },
   calendar: { x: 1300, y: 330 },
+  notes: { x: 1300, y: 700 },
+  timer: { x: 1620, y: 60 },
+  clipboard: { x: 860, y: 780 },
   settings: { x: 500, y: 60 },
 };
 const MIN_SCALE = 0.5;
@@ -98,6 +101,8 @@ function loadState() {
     weatherCache: null,
     launcher: { items: [] },
     calendar: {},
+    notes: { tasks: [], text: "" },
+    profiles: {},
   };
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -115,6 +120,8 @@ function loadState() {
         weatherCache: raw.weatherCache || null,
         launcher: raw.launcher && Array.isArray(raw.launcher.items) ? raw.launcher : { items: [] },
         calendar: raw.calendar || {},
+        notes: raw.notes && Array.isArray(raw.notes.tasks) ? { text: "", ...raw.notes } : { tasks: [], text: "" },
+        profiles: raw.profiles || {},
       };
       // Migrate the old global Fahrenheit switch to the weather panel options.
       if (raw.fahrenheit && s.opts.weather?.fahrenheit === undefined) {
@@ -681,6 +688,9 @@ function applyGlassSettings() {
   }
 }
 
+/** Monitor rectangles (CSS px, relative to the overlay) when the overlay spans several monitors. */
+let wallpaperRects = null;
+
 /** Loads the wallpaper and computes the "cover" geometry used by the glass backdrop. */
 async function loadWallpaper() {
   try {
@@ -708,7 +718,18 @@ async function loadWallpaper() {
     c.width = W;
     c.height = H;
     const g = c.getContext("2d");
-    g.drawImage(img, P + (vw - iw) / 2, P + (vh - ih) / 2, iw, ih);
+    // One cover-fitted copy of the wallpaper per monitor (a single one when the overlay covers one monitor).
+    for (const r of wallpaperRects || [{ x: 0, y: 0, w: vw, h: vh }]) {
+      const k = Math.max(r.w / img.naturalWidth, r.h / img.naturalHeight);
+      const w = img.naturalWidth * k;
+      const h = img.naturalHeight * k;
+      g.save();
+      g.beginPath();
+      g.rect(P + r.x, P + r.y, r.w, r.h);
+      g.clip();
+      g.drawImage(img, P + r.x + (r.w - w) / 2, P + r.y + (r.h - h) / 2, w, h);
+      g.restore();
+    }
     g.drawImage(c, P, P, 1, vh, 0, P, P, vh); // left
     g.drawImage(c, P + vw - 1, P, 1, vh, P + vw, P, W - P - vw, vh); // right
     g.drawImage(c, 0, P, W, 1, 0, 0, W, P); // top
@@ -967,6 +988,215 @@ frontToggle.addEventListener("change", () => setFront(frontToggle.checked));
 setInterval(pollAbove, 600);
 
 /* ------------------------------------------------------------------ */
+/* Typing: the overlay is not focusable, so text fields ask for focus  */
+/* ------------------------------------------------------------------ */
+
+document.addEventListener("focusin", (e) => {
+  if (e.target.matches?.('input[type="text"], textarea')) invoke("set_typing", { on: true }).catch(() => {});
+});
+document.addEventListener("focusout", (e) => {
+  if (e.target.matches?.('input[type="text"], textarea')) invoke("set_typing", { on: false }).catch(() => {});
+});
+
+/* ------------------------------------------------------------------ */
+/* Themes                                                             */
+/* ------------------------------------------------------------------ */
+
+const THEMES = {
+  midnight: { accent: "#7aa7ff", tint: "20, 30, 60" },
+  aurora: { accent: "#b794ff", tint: "90, 40, 160" },
+  ember: { accent: "#ffb36b", tint: "160, 70, 30" },
+  forest: { accent: "#6fe3a0", tint: "20, 100, 60" },
+  mono: { accent: "#e5e7eb", tint: "90, 90, 90" },
+};
+const FONTS = {
+  inter: '"Inter", system-ui, sans-serif',
+  system: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif',
+  mono: '"Cascadia Mono", Consolas, monospace',
+};
+const TINT_ALPHA = { off: 0, light: 0.12, medium: 0.25, strong: 0.4 };
+
+function applyTheme() {
+  const t = THEMES[opt("theme", "preset")] || THEMES.midnight;
+  const root = document.documentElement.style;
+  root.setProperty("--accent", t.accent);
+  root.setProperty("--tint", t.tint);
+  root.setProperty("--tint-alpha", String(TINT_ALPHA[opt("theme", "tint")] ?? 0));
+  root.setProperty("--font", FONTS[opt("theme", "font")] || FONTS.inter);
+}
+
+registerPanel("theme", {
+  options: [
+    {
+      key: "preset",
+      label: "Theme",
+      type: "choice",
+      def: "midnight",
+      choices: [
+        ["midnight", "Midnight"],
+        ["aurora", "Aurora"],
+        ["ember", "Ember"],
+        ["forest", "Forest"],
+        ["mono", "Mono"],
+      ],
+    },
+    {
+      key: "tint",
+      label: "Glass tint",
+      type: "choice",
+      def: "light",
+      choices: [
+        ["off", "None"],
+        ["light", "Light"],
+        ["medium", "Medium"],
+        ["strong", "Strong"],
+      ],
+    },
+    {
+      key: "font",
+      label: "Font",
+      type: "choice",
+      def: "inter",
+      choices: [
+        ["inter", "Inter"],
+        ["system", "Windows"],
+        ["mono", "Monospace"],
+      ],
+    },
+  ],
+  onOption: applyTheme,
+});
+
+/* ------------------------------------------------------------------ */
+/* Profiles: remember which panels are on, where they are and how big   */
+/* ------------------------------------------------------------------ */
+
+const profileName = document.getElementById("profile-name");
+
+function renderProfiles() {
+  const host = document.getElementById("profile-list");
+  host.textContent = "";
+  for (const name of Object.keys(state.profiles)) {
+    const row = document.createElement("div");
+    row.className = "profile-row";
+    row.innerHTML = '<b></b><button type="button" class="apply">Apply</button><button type="button" class="rm" title="Delete">\u2715</button>';
+    row.querySelector("b").textContent = name;
+    row.querySelector(".apply").addEventListener("click", () => applyProfile(name));
+    row.querySelector(".rm").addEventListener("click", () => {
+      delete state.profiles[name];
+      saveState();
+      renderProfiles();
+    });
+    host.appendChild(row);
+  }
+}
+
+function saveProfile() {
+  const name = profileName.value.trim();
+  if (!name) return;
+  state.profiles[name] = {
+    positions: JSON.parse(JSON.stringify(state.positions)),
+    scales: { ...state.scales },
+    enabled: { ...state.enabled },
+  };
+  profileName.value = "";
+  saveState();
+  renderProfiles();
+}
+
+function applyProfile(name) {
+  const p = state.profiles[name];
+  if (!p) return;
+  state.positions = JSON.parse(JSON.stringify(p.positions));
+  state.scales = { ...p.scales };
+  state.enabled = { ...p.enabled };
+  saveState();
+  buildPanelList();
+  restorePositions();
+  applyEnabled();
+}
+
+document.getElementById("profile-save").addEventListener("click", saveProfile);
+profileName.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") saveProfile();
+});
+
+/* ------------------------------------------------------------------ */
+/* General: start with Windows, monitor                                */
+/* ------------------------------------------------------------------ */
+
+registerPanel("general", {
+  options: [{ key: "autostart", label: "Start with Windows", type: "toggle", def: false }],
+  onOption: async (key, value) => {
+    if (key === "autostart") {
+      const ok = await invoke("autostart_set", { enabled: !!value }).catch(() => false);
+      if (!ok) console.warn("Could not change the Windows startup entry");
+    }
+    if (key === "monitor") {
+      try {
+        await applyMonitor(value);
+        setTimeout(async () => {
+          await loadWallpaper();
+          rebuildAllGlass();
+          restorePositions();
+          updateHitRegions();
+        }, 400);
+      } catch (err) {
+        console.warn("Could not move to that monitor:", err);
+      }
+    }
+  },
+});
+
+/** "all" stretches the overlay over every monitor, a number picks one monitor. */
+async function applyMonitor(value) {
+  const monitors = await invoke("list_monitors");
+  if (value === "all") {
+    const left = Math.min(...monitors.map((m) => m.x));
+    const top = Math.min(...monitors.map((m) => m.y));
+    const dpr = window.devicePixelRatio || 1;
+    wallpaperRects = monitors.map((m) => ({ x: (m.x - left) / dpr, y: (m.y - top) / dpr, w: m.width / dpr, h: m.height / dpr }));
+    await invoke("set_monitor", { index: -1 });
+  } else {
+    wallpaperRects = null;
+    await invoke("set_monitor", { index: Number(value) });
+  }
+  await new Promise((r) => setTimeout(r, 350)); // let the webview adopt the new size
+}
+
+function rebuildAllGlass() {
+  for (const g of glassFilters) rebuildGlassMap(g);
+}
+
+/** The real state of "Start with Windows" and the monitor list come from the system. */
+async function loadSystemOptions() {
+  try {
+    (state.opts.general ||= {}).autostart = await invoke("autostart_get");
+  } catch {
+    /* keep the stored value */
+  }
+  try {
+    const monitors = await invoke("list_monitors");
+    if (monitors.length > 1) {
+      PANELS.general.options.push({
+        key: "monitor",
+        label: "Show widgets on",
+        type: "choice",
+        def: String(Math.max(0, monitors.findIndex((m) => m.primary))),
+        choices: [
+          ...monitors.map((m) => [String(m.index), `Monitor ${m.index + 1}${m.primary ? " (main)" : ""} · ${m.width}×${m.height}`]),
+          ["all", "All monitors (wide overlay)"],
+        ],
+      });
+      const saved = opt("general", "monitor");
+      if (saved === "all" || (saved !== undefined && !monitors[Number(saved)]?.primary)) await applyMonitor(saved);
+    }
+  } catch {
+    /* single monitor */
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Boot                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -976,9 +1206,17 @@ async function boot() {
   iconsToggle.checked = !!state.glass.icons;
   applyCaptureSettings();
 
+  await loadSystemOptions();
   buildPanelList();
-  const layoutList = document.getElementById("layout-list");
-  for (const o of PANELS.layout.options) layoutList.appendChild(optionRow("layout", o));
+  const fillList = (id, panel) => {
+    const host = document.getElementById(id);
+    for (const o of PANELS[panel].options) host.appendChild(optionRow(panel, o));
+  };
+  fillList("layout-list", "layout");
+  fillList("theme-list", "theme");
+  fillList("general-list", "general");
+  renderProfiles();
+  applyTheme();
   applyLayout();
   applyHotkey();
   for (const panel of Object.values(PANELS)) panel.init?.();

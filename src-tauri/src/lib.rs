@@ -11,6 +11,7 @@ use std::{
 
 mod calendar;
 mod claude;
+mod extras;
 mod herdr;
 mod launcher;
 mod media;
@@ -372,6 +373,7 @@ fn capture_region(win: tauri::WebviewWindow, x: f64, y: f64, w: f64, h: f64, sca
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _shortcut, event| {
@@ -383,6 +385,14 @@ pub fn run() {
         )
         .manage(HitRegions::default())
         .invoke_handler(tauri::generate_handler![
+            extras::notify,
+            extras::clip_seq,
+            extras::clip_text,
+            extras::clip_set,
+            extras::autostart_get,
+            extras::autostart_set,
+            extras::list_monitors,
+            extras::set_monitor,
             set_hotkey,
             set_hit_regions,
             get_wallpaper,

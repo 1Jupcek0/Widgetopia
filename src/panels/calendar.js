@@ -19,6 +19,8 @@
   cfg.ics ||= [];
   cfg.cache ||= { at: 0, events: [] };
 
+  cfg.notified ||= {}; // event key -> time it was announced (so every reminder is sent once)
+  let reminderTimer = 0;
   let outlookStatus = ""; // "", "ok", "not-running", or an error text
   let wasRunning = false;
   let busy = false;
@@ -133,6 +135,30 @@
       }
     }
     timer = setTimeout(refresh, REFRESH_MS);
+  }
+
+  /** Sends a Windows notification shortly before events start. */
+  function checkReminders(test = false) {
+    if (!test && (!opt("calendar", "remind") || card.classList.contains("off"))) return;
+    const lead = Number(opt("calendar", "lead")) * 60000;
+    const now = Date.now();
+    if (test) {
+      invoke("notify", { title: "Calendar reminder (test)", body: "This is how reminders look." }).catch(() => {});
+      return;
+    }
+    for (const e of cfg.cache.events) {
+      if (e.allDay || e.start <= now || e.start - now > lead) continue;
+      const key = `${e.cal}|${e.title}|${e.start}`;
+      if (cfg.notified[key]) continue;
+      cfg.notified[key] = now;
+      const mins = Math.max(1, Math.round((e.start - now) / 60000));
+      invoke("notify", {
+        title: `In ${mins} min: ${e.title}`,
+        body: `${timeText(e.start)}–${timeText(e.end)}${e.location ? ` · ${e.location}` : ""}`,
+      }).catch(() => {});
+    }
+    for (const [key, t] of Object.entries(cfg.notified)) if (now - t > 24 * 3600000) delete cfg.notified[key];
+    saveState();
   }
 
   /** Cheap check every 30 s: Outlook was just opened -> refresh straight away. */
@@ -412,10 +438,20 @@
       { key: "hideEnded", label: "Hide events that ended", type: "toggle", def: true },
       { key: "allDay", label: "Show all-day events", type: "toggle", def: true },
       { key: "location", label: "Show locations", type: "toggle", def: true },
+      { key: "remind", label: "Remind me before events", type: "toggle", def: true },
+      {
+        key: "lead",
+        label: "Remind",
+        type: "choice",
+        def: "10",
+        choices: ["2", "5", "10", "15", "30"].map((v) => [v, `${v} min before`]),
+        when: () => !!opt("calendar", "remind"),
+      },
     ],
     actions: [
       { label: "Calendars…", run: openConfig },
       { label: "Refresh now", run: () => refresh(true) },
+      { label: "Send a test notification", run: () => checkReminders(true) },
       { label: "Open Outlook", run: () => invoke("launch_item", { target: "outlook.exe" }) },
     ],
     onOption: (key) => {
@@ -426,10 +462,12 @@
     onToggle: (on) => {
       clearTimeout(timer);
       clearInterval(watchTimer);
+      clearInterval(reminderTimer);
       if (!on) return;
       render();
       refresh(false);
       watchTimer = setInterval(watchOutlook, 30000);
+      reminderTimer = setInterval(checkReminders, 30000);
     },
     init: () => render(),
   });

@@ -24,6 +24,10 @@ window per widget.
 - Performance panel: CPU, GPU, RAM, disk, network and the temperatures Windows exposes (ACPI thermal zone, NVIDIA GPU sensor)
 - Quick settings panel: Wi-Fi, Bluetooth, airplane mode, power mode, volume, microphone mute, brightness, dark mode, battery, lock; every tile is optional
 - Layout tools (Settings -> Layout): grid overlay, snap to grid / screen centre / edges / other panels with alignment guides, proportional resizing with a corner grip (double-click resets), optionally allowed while locked
+- Notes panel (to-do list or free note), Timer panel (Pomodoro, countdown, stopwatch, with notification and sound) and Clipboard history (opt-in, memory only, ignores password-manager copies)
+- Calendar reminders as Windows notifications (minutes before an event are selectable)
+- Themes (accent colour, glass tint, font) and layout profiles (save / apply which panels are on, where they are and how big)
+- Start with Windows, and a choice of monitor for the widgets (one monitor or one wide overlay over all of them)
 - Global shortcut (default Ctrl + Alt + W, changeable or off in Settings -> Layout) hides / shows all widgets; options that do not apply (e.g. analog dial in digital mode) are greyed out
 - Settings lists every panel with an on/off switch
 - Right click on a widget: *Reload*, *Settings*, *Lock / Unlock* (the tray icon has the same Reload / Settings). Settings holds everything else (glass blur/refraction, quit)
@@ -96,7 +100,7 @@ Add a `<section class="widget" data-id data-title data-toggle>` to `src/index.ht
 
 - Media panel shows cover art only: Windows exposes no video frames (Spotify canvas/video, browser video) to other apps
 
-- Only the primary monitor is covered
+- The overlay covers one monitor, or all of them as one wide overlay (Settings -> General); on "all" the primary wallpaper is repeated for each monitor in the glass
 - In background mode the glass backdrop is the wallpaper only; windows can only be refracted in front mode
 - In front mode the overlay is hidden from screen captures/screenshots (needed to capture what is behind it)
 - Desktop icons are covered visually by nothing, but clicks on empty overlay areas pass through to them

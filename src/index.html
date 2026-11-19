@@ -189,6 +189,64 @@
       </div>
     </section>
 
+    <!-- Notes: to-do list or free note -->
+    <section class="widget glass notes" id="notes" data-id="notes" data-title="Notes" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="nt-head"><b>Notes</b><span id="nt-count"></span></div>
+        <div class="nt-tasks">
+          <div class="nt-list" id="nt-list"></div>
+          <div class="nt-add">
+            <input type="text" id="nt-input" placeholder="Add a task…" autocomplete="off" spellcheck="false" />
+            <button type="button" id="nt-add">Add</button>
+          </div>
+        </div>
+        <textarea id="nt-text" class="nt-note" placeholder="Write a note…" spellcheck="false"></textarea>
+      </div>
+    </section>
+
+    <!-- Timer: pomodoro, countdown, stopwatch -->
+    <section class="widget glass timer" id="timer" data-id="timer" data-title="Timer" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="tm-tabs">
+          <button type="button" class="tm-tab on" data-mode="pomodoro">Pomodoro</button>
+          <button type="button" class="tm-tab" data-mode="timer">Timer</button>
+          <button type="button" class="tm-tab" data-mode="stopwatch">Stopwatch</button>
+        </div>
+        <div class="tm-ring">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="tm-ring-bg" cx="60" cy="60" r="54" />
+            <circle class="tm-ring-fill" id="tm-ring-fill" cx="60" cy="60" r="54" />
+          </svg>
+          <div class="tm-center">
+            <div class="tm-time" id="tm-time">25:00</div>
+            <div class="tm-phase" id="tm-phase"></div>
+          </div>
+        </div>
+        <div class="tm-controls">
+          <button type="button" id="tm-reset" title="Reset">Reset</button>
+          <button type="button" id="tm-start" class="primary">Start</button>
+          <button type="button" id="tm-skip" title="Skip to the next phase">Skip</button>
+        </div>
+        <div class="tm-count" id="tm-count"></div>
+      </div>
+    </section>
+
+    <!-- Clipboard history (recording is off until you turn it on) -->
+    <section class="widget glass clipboard" id="clipboard" data-id="clipboard" data-title="Clipboard history" data-toggle data-interactive>
+      <div class="glass-clip"><div class="glass-bg"></div></div>
+      <div class="glass-content">
+        <div class="cb-head">
+          <b>Clipboard</b>
+          <button type="button" id="cb-state" class="cb-state" title="Turn recording on or off">recording off</button>
+          <button type="button" id="cb-clear" class="icon-btn" title="Clear history">&#128465;</button>
+        </div>
+        <div class="cb-list" id="cb-list"></div>
+        <div class="cb-note" id="cb-note">Recording is off. Click &ldquo;recording off&rdquo; to start. Texts stay in memory only and are gone when the app closes.</div>
+      </div>
+    </section>
+
     <!-- Settings panel (opened from the right-click menu or the tray) -->
     <section class="widget glass hidden" id="settings" data-id="settings" data-interactive>
       <div class="glass-clip"><div class="glass-bg"></div></div>
@@ -203,8 +261,22 @@
           <div class="section-title">Panels</div>
           <div id="panel-list"></div>
 
+          <div class="section-title">Appearance</div>
+          <div id="theme-list"></div>
+
           <div class="section-title">Layout</div>
           <div id="layout-list"></div>
+
+          <div class="section-title">Profiles</div>
+          <div id="profile-list"></div>
+          <div class="profile-add">
+            <input type="text" id="profile-name" placeholder="Profile name" autocomplete="off" spellcheck="false" />
+            <button type="button" id="profile-save">Save current</button>
+          </div>
+          <p class="hint">A profile remembers which panels are on, and where they are and how big. Switch between them in one click.</p>
+
+          <div class="section-title">General</div>
+          <div id="general-list"></div>
 
           <div class="section-title">Glass</div>
           <label class="row">
@@ -254,5 +326,8 @@
     <script src="panels/launcher.js"></script>
     <script src="panels/ics.js"></script>
     <script src="panels/calendar.js"></script>
+    <script src="panels/notes.js"></script>
+    <script src="panels/timer.js"></script>
+    <script src="panels/clipboard.js"></script>
   </body>
 </html>
