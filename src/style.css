@@ -1873,3 +1873,22 @@ button.cal-ev:hover {
 .analog .pin {
   fill: #ff6b5e;
 }
+
+/* ---------- Disabled options, hidden widgets ---------- */
+
+.opt-row.disabled {
+  opacity: 0.4;
+}
+.opt-row.disabled button,
+.opt-row.disabled input {
+  cursor: default;
+}
+.ctx button:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+body.all-hidden .widget,
+body.all-hidden #grid,
+body.all-hidden .guide {
+  visibility: hidden;
+}

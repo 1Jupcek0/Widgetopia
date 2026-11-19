@@ -121,6 +121,18 @@ fn wallpaper_path() -> Option<PathBuf> {
     p.is_file().then_some(p)
 }
 
+/// Registers the global shortcut that shows / hides all widgets (None = no shortcut).
+#[tauri::command]
+fn set_hotkey(app: tauri::AppHandle, accelerator: Option<String>) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+    let shortcuts = app.global_shortcut();
+    shortcuts.unregister_all().map_err(|e| e.to_string())?;
+    if let Some(keys) = accelerator {
+        shortcuts.register(keys.as_str()).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
@@ -360,8 +372,18 @@ fn capture_region(win: tauri::WebviewWindow, x: f64, y: f64, w: f64, h: f64, sca
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let _ = app.emit("toggle-widgets", ());
+                    }
+                })
+                .build(),
+        )
         .manage(HitRegions::default())
         .invoke_handler(tauri::generate_handler![
+            set_hotkey,
             set_hit_regions,
             get_wallpaper,
             quit_app,

@@ -109,6 +109,7 @@
         label: "Analog dial",
         type: "choice",
         def: "marks",
+        when: () => opt("clock", "style") === "analog",
         choices: [
           ["marks", "Tick marks"],
           ["numbers", "Numbers"],
@@ -116,7 +117,7 @@
         ],
       },
       { key: "seconds", label: "Show seconds", type: "toggle", def: true },
-      { key: "hour12", label: "12-hour clock (digital)", type: "toggle", def: false },
+      { key: "hour12", label: "12-hour clock", type: "toggle", def: false, when: () => opt("clock", "style") !== "analog" },
       { key: "date", label: "Show date", type: "toggle", def: true },
     ],
     onOption: tick,

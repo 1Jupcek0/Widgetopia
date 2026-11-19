@@ -24,6 +24,7 @@ window per widget.
 - Performance panel: CPU, GPU, RAM, disk, network and the temperatures Windows exposes (ACPI thermal zone, NVIDIA GPU sensor)
 - Quick settings panel: Wi-Fi, Bluetooth, airplane mode, power mode, volume, microphone mute, brightness, dark mode, battery, lock; every tile is optional
 - Layout tools (Settings -> Layout): grid overlay, snap to grid / screen centre / edges / other panels with alignment guides, proportional resizing with a corner grip (double-click resets), optionally allowed while locked
+- Global shortcut (default Ctrl + Alt + W, changeable or off in Settings -> Layout) hides / shows all widgets; options that do not apply (e.g. analog dial in digital mode) are greyed out
 - Settings lists every panel with an on/off switch
 - Right click on a widget: *Reload*, *Settings*, *Lock / Unlock* (the tray icon has the same Reload / Settings). Settings holds everything else (glass blur/refraction, quit)
 

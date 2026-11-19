@@ -37,7 +37,8 @@ const state = loadState();
 
 /**
  * A panel can provide:
- *   options:   [{ key, label, type: "toggle" | "choice", def, choices?: [[value, label], ...] }]
+ *   options:   [{ key, label, type: "toggle" | "choice", def, choices?: [[value, label], ...],
+ *                 when?: () => boolean }]   `when` false = shown but disabled (greyed out)
  *   actions:   [{ label, run }]            extra items for the right-click menu
  *   onOption:  (key, value) => void        called after an option changed
  *   onToggle:  (enabled) => void           called when the panel is switched on/off
@@ -60,6 +61,20 @@ function setOpt(panelId, key, value) {
   (state.opts[panelId] ||= {})[key] = value;
   saveState();
   PANELS[panelId]?.onOption?.(key, value);
+  syncOptionRows(panelId);
+}
+
+const optionActive = (panelId, o) => !o.when || !!o.when();
+
+/** Greys out the option rows of a panel whose `when` condition is no longer true. */
+function syncOptionRows(panelId) {
+  for (const row of document.querySelectorAll(`.opt-row[data-panel="${panelId}"]`)) {
+    const o = PANELS[panelId]?.options?.find((x) => x.key === row.dataset.key);
+    if (!o) continue;
+    const active = optionActive(panelId, o);
+    row.classList.toggle("disabled", !active);
+    for (const control of row.querySelectorAll("input, button")) control.disabled = !active;
+  }
 }
 
 function isEnabled(id) {
@@ -161,7 +176,9 @@ let menuOpen = false;
 
 function updateHitRegions() {
   let rects;
-  if (dragging || menuOpen) {
+  if (document.body.classList.contains("all-hidden")) {
+    rects = []; // widgets hidden with the global shortcut: everything is click-through
+  } else if (dragging || menuOpen) {
     // While dragging (or while the context menu is open), capture the whole screen so fast
     // moves never lose the pointer and a click outside can close the menu.
     rects = [{ x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }];
@@ -374,9 +391,43 @@ registerPanel("layout", {
     },
     { key: "resize", label: "Allow resizing", type: "toggle", def: true },
     { key: "resizeLocked", label: "Resize while locked", type: "toggle", def: false },
+    { key: "hotkey", label: "Global shortcut: show / hide widgets", type: "toggle", def: true },
+    {
+      key: "hotkeyKeys",
+      label: "Shortcut",
+      type: "choice",
+      def: "Ctrl+Alt+W",
+      choices: [
+        ["Ctrl+Alt+W", "Ctrl + Alt + W"],
+        ["Ctrl+Alt+Space", "Ctrl + Alt + Space"],
+        ["Ctrl+Shift+W", "Ctrl + Shift + W"],
+        ["Ctrl+Alt+H", "Ctrl + Alt + H"],
+      ],
+      when: () => !!opt("layout", "hotkey"),
+    },
   ],
-  onOption: applyLayout,
+  onOption: (key) => {
+    applyLayout();
+    if (key === "hotkey" || key === "hotkeyKeys") applyHotkey();
+  },
 });
+
+/** Registers (or removes) the global shortcut in the backend. */
+async function applyHotkey() {
+  const keys = opt("layout", "hotkey") ? opt("layout", "hotkeyKeys") : null;
+  try {
+    await invoke("set_hotkey", { accelerator: keys });
+  } catch (err) {
+    console.warn("Shortcut not available:", err);
+  }
+}
+
+function toggleWidgets() {
+  document.body.classList.toggle("all-hidden");
+  closeMenu();
+  updateHitRegions();
+}
+listen("toggle-widgets", toggleWidgets);
 
 lockToggle.addEventListener("change", () => setLocked(lockToggle.checked));
 
@@ -403,9 +454,10 @@ let ctxPanel = null;
 let ctxTarget = null; // the element that was right-clicked (panels can add item-specific actions)
 let ctxPos = { x: 0, y: 0 };
 
-function menuButton(label, { checked, value, run, keepOpen } = {}) {
+function menuButton(label, { checked, value, run, keepOpen, disabled } = {}) {
   const b = document.createElement("button");
   b.type = "button";
+  b.disabled = !!disabled;
   const left = document.createElement("span");
   left.textContent = label;
   b.appendChild(left);
@@ -442,11 +494,11 @@ function renderMenu() {
     any = true;
     if (o.type === "toggle") {
       ctx.appendChild(
-        menuButton(o.label, { checked: !!opt(ctxPanel, o.key), keepOpen: true, run: () => setOpt(ctxPanel, o.key, !opt(ctxPanel, o.key)) })
+        menuButton(o.label, { checked: !!opt(ctxPanel, o.key), keepOpen: true, disabled: !optionActive(ctxPanel, o), run: () => setOpt(ctxPanel, o.key, !opt(ctxPanel, o.key)) })
       );
     } else {
       ctx.appendChild(
-        menuButton(o.label, { value: choiceLabel(o, opt(ctxPanel, o.key)), keepOpen: true, run: () => cycleChoice(ctxPanel, o) })
+        menuButton(o.label, { value: choiceLabel(o, opt(ctxPanel, o.key)), keepOpen: true, disabled: !optionActive(ctxPanel, o), run: () => cycleChoice(ctxPanel, o) })
       );
     }
   }
@@ -756,6 +808,8 @@ function buildPanelList() {
 function optionRow(panelId, o) {
   const row = document.createElement("div");
   row.className = "row opt-row";
+  row.dataset.panel = panelId;
+  row.dataset.key = o.key;
   const label = document.createElement("span");
   label.textContent = o.label;
   row.appendChild(label);
@@ -776,6 +830,10 @@ function optionRow(panelId, o) {
       btn.textContent = choiceLabel(o, opt(panelId, o.key));
     });
     row.appendChild(btn);
+  }
+  if (!optionActive(panelId, o)) {
+    row.classList.add("disabled");
+    for (const control of row.querySelectorAll("input, button")) control.disabled = true;
   }
   return row;
 }
@@ -922,6 +980,7 @@ async function boot() {
   const layoutList = document.getElementById("layout-list");
   for (const o of PANELS.layout.options) layoutList.appendChild(optionRow("layout", o));
   applyLayout();
+  applyHotkey();
   for (const panel of Object.values(PANELS)) panel.init?.();
 
   await loadWallpaper();
