@@ -84,13 +84,41 @@ Open-Meteo), the optional lyrics lookup (artist and title to LRCLIB, off by defa
 
 ## Performance
 
-Measured on a release build with the default panels and nothing moving: about 3 % of one CPU core and ~550 MB RAM,
-most of it WebView2. Rules of thumb used in the code: no endless CSS animations, no large text-shadow blur radii on
-text that changes, progress bars use `transform`, and the UI is not rebuilt when data did not change.
+Widgetopia is built to sit on the desktop all day without being noticed. These numbers come from the benchmark
+script in this repository (`scripts/benchmark.ps1`): it starts a release build, switches the scenarios over the
+WebView2 debugging port and samples the whole process tree (the app plus all WebView2 processes) for 60 seconds
+after a warm-up, with nothing on screen moving.
 
-Two glass options need a live screen capture and are therefore **heavy** (roughly 15–20 % of a core while active),
-so they are opt-in: *Bring to front on click* and *Glass sees desktop icons*. Only the liquid glass style needs them;
-the other styles are cheaper.
+| Scenario | CPU, % of one core | CPU, % of whole machine | Memory | GPU |
+|---|---:|---:|---:|---:|
+| **Default layout** (the 6 panels from the screenshot) | **3.0 %** | 0.25 % | 541 MB | ~0 % |
+| Default layout, *Solid* style | 2.3 % | 0.19 % | 543 MB | ~0 % |
+| **All 12 panels on** (clipboard recording included) | **4.8 %** | 0.40 % | 575 MB | ~0 % |
+| Default + *Bring to front* (live screen capture) | 12.3 % | 1.02 % | 607 MB | ~0 % |
+| Default + *Glass sees desktop icons* (live screen capture) | 16.3 % | 1.36 % | 592 MB | ~0 % |
+| Everything switched off (idle floor) | 0.1 % | 0.01 % | 559 MB | ~0 % |
+
+*Measured on an Intel Xeon W-10855M (12 threads), 32 GB RAM, NVIDIA Quadro T2000, Windows 11, 1920×1080,
+release build.* Your numbers will differ with the hardware, but the ratios hold.
+
+What to take from it:
+
+- **A typical setup costs about 3 % of one core** (a quarter of a percent of this machine) and effectively no GPU.
+  Turning on every panel adds only ~2 points more, because panels only poll while they are enabled and the UI is
+  not rebuilt when the data did not change.
+- **Memory is almost all WebView2** (the single shared browser runtime, about 7 processes). The app itself is
+  tiny; more panels barely change the total.
+- **The two live-capture options are the only expensive thing** (roughly 4× the default). They need a continuous
+  screen capture, so they are opt-in and marked *heavy* in Settings. Only the liquid glass style uses them; every
+  other style skips the capture entirely.
+- **Style matters a little:** the flat styles are cheaper than liquid glass because there is no SVG refraction
+  filter to repaint.
+
+Rules of thumb used in the code: no endless CSS animations, no large text-shadow blur radii on text that changes,
+progress bars use `transform`, hit-testing uses plain Win32 calls, and nothing polls while its panel is off.
+
+To reproduce it on your machine, build a separate copy (see *Tests* below) and run
+`powershell -File scriptsenchmark.ps1 -Exe src-tauri	arget-testelease\widgetopia.exe`.
 
 ## Claude usage panel
 
