@@ -892,9 +892,10 @@ const iconsToggle = document.getElementById("icons-toggle");
 
 /** Applies front mode + the icons option on the backend (the capture needs the overlay hidden from it). */
 function applyCaptureSettings() {
+  const capture = glassStyle() && (state.front || !!state.glass.icons); // other styles have nothing to refract
   invoke("set_front_mode", { enabled: state.front }).catch(() => {});
-  invoke("set_capture_protected", { on: state.front || !!state.glass.icons }).catch(() => {});
-  if (!state.front && !state.glass.icons) setLive(false);
+  invoke("set_capture_protected", { on: capture }).catch(() => {});
+  if (!capture) setLive(false);
   else pollAbove();
 }
 
@@ -919,7 +920,7 @@ function setLive(on) {
 }
 
 async function pollAbove() {
-  if (!state.front && !state.glass.icons) return;
+  if (!glassStyle() || (!state.front && !state.glass.icons)) return;
   try {
     // Desktop icons live on the desktop itself, so with that option capturing never stops.
     setLive(state.glass.icons || (await invoke("overlay_above_windows")));
@@ -1012,11 +1013,20 @@ document.addEventListener("focusout", (e) => {
 /* ------------------------------------------------------------------ */
 
 const THEMES = {
-  midnight: { accent: "#7aa7ff", tint: "20, 30, 60" },
-  aurora: { accent: "#b794ff", tint: "90, 40, 160" },
-  ember: { accent: "#ffb36b", tint: "160, 70, 30" },
-  forest: { accent: "#6fe3a0", tint: "20, 100, 60" },
-  mono: { accent: "#e5e7eb", tint: "90, 90, 90" },
+  midnight: { accent: "#7aa7ff", accentLight: "#3b6fe0", tint: "20, 30, 60" },
+  aurora: { accent: "#b794ff", accentLight: "#7c4dff", tint: "90, 40, 160" },
+  ember: { accent: "#ffb36b", accentLight: "#e0702a", tint: "160, 70, 30" },
+  forest: { accent: "#6fe3a0", accentLight: "#1f9d5b", tint: "20, 100, 60" },
+  mono: { accent: "#e5e7eb", accentLight: "#3a3f4b", tint: "90, 90, 90" },
+};
+/** Visual styles: how the panels are drawn. Liquid glass is the default. */
+const STYLES = {
+  glass: { label: "Liquid glass" },
+  solid: { label: "Solid" },
+  paper: { label: "Paper (light)", light: true },
+  neon: { label: "Neon" },
+  terminal: { label: "Terminal", font: "mono" },
+  minimal: { label: "Minimal (no cards)" },
 };
 const FONTS = {
   inter: '"Inter", system-ui, sans-serif',
@@ -1025,20 +1035,41 @@ const FONTS = {
 };
 const TINT_ALPHA = { off: 0, light: 0.12, medium: 0.25, strong: 0.4 };
 
+const glassStyle = () => (opt("theme", "style") || "glass") === "glass";
+
 function applyTheme() {
+  const style = STYLES[opt("theme", "style")] ? opt("theme", "style") : "glass";
   const t = THEMES[opt("theme", "preset")] || THEMES.midnight;
   const root = document.documentElement.style;
-  root.setProperty("--accent", t.accent);
+  const changed = document.body.dataset.style !== style;
+  document.body.dataset.style = style;
+  root.setProperty("--accent", STYLES[style].light ? t.accentLight : t.accent);
   root.setProperty("--tint", t.tint);
   root.setProperty("--tint-alpha", String(TINT_ALPHA[opt("theme", "tint")] ?? 0));
-  root.setProperty("--font", FONTS[opt("theme", "font")] || FONTS.inter);
+  const font = opt("theme", "font") === "auto" ? STYLES[style].font || "inter" : opt("theme", "font");
+  root.setProperty("--font", FONTS[font] || FONTS.inter);
+  if (changed && typeof glassFilters !== "undefined") {
+    // The refraction map depends on the corner radius, which depends on the style.
+    for (const g of glassFilters) g.w = -1;
+    requestAnimationFrame(() => {
+      rebuildAllGlass();
+      applyCaptureSettings(); // live capture is only needed for the glass style
+    });
+  }
 }
 
 registerPanel("theme", {
   options: [
     {
+      key: "style",
+      label: "Style",
+      type: "choice",
+      def: "glass",
+      choices: Object.entries(STYLES).map(([k, v]) => [k, v.label]),
+    },
+    {
       key: "preset",
-      label: "Theme",
+      label: "Colours",
       type: "choice",
       def: "midnight",
       choices: [
@@ -1048,6 +1079,7 @@ registerPanel("theme", {
         ["forest", "Forest"],
         ["mono", "Mono"],
       ],
+      when: () => opt("theme", "style") !== "terminal",
     },
     {
       key: "tint",
@@ -1060,13 +1092,15 @@ registerPanel("theme", {
         ["medium", "Medium"],
         ["strong", "Strong"],
       ],
+      when: glassStyle,
     },
     {
       key: "font",
       label: "Font",
       type: "choice",
-      def: "inter",
+      def: "auto",
       choices: [
+        ["auto", "Style default"],
         ["inter", "Inter"],
         ["system", "Windows"],
         ["mono", "Monospace"],
@@ -1141,9 +1175,9 @@ registerPanel("general", {
       const ok = await invoke("autostart_set", { enabled: !!value }).catch(() => false);
       if (!ok) console.warn("Could not change the Windows startup entry");
     }
-    if (key === "monitor") {
+    if (key === "monitor" || key === "allMonitors") {
       try {
-        await applyMonitor(value);
+        await applyMonitor(opt("general", "allMonitors") ? "all" : opt("general", "monitor"));
         setTimeout(async () => {
           await loadWallpaper();
           rebuildAllGlass();
@@ -1190,17 +1224,24 @@ async function loadSystemOptions() {
   try {
     const monitors = await invoke("list_monitors");
     if (monitors.length > 1) {
-      PANELS.general.options.push({
-        key: "monitor",
-        label: "Show widgets on",
-        type: "choice",
-        def: String(Math.max(0, monitors.findIndex((m) => m.primary))),
-        choices: [
-          ...monitors.map((m) => [String(m.index), `Monitor ${m.index + 1}${m.primary ? " (main)" : ""} · ${m.width}×${m.height}`]),
-          ["all", "All monitors (wide overlay)"],
-        ],
-      });
-      const saved = opt("general", "monitor");
+      const g = (state.opts.general ||= {});
+      if (g.monitor === "all") {
+        // older versions stored "all" as one of the choices
+        g.allMonitors = true;
+        delete g.monitor;
+      }
+      PANELS.general.options.push(
+        { key: "allMonitors", label: "Show widgets on all monitors", type: "toggle", def: false },
+        {
+          key: "monitor",
+          label: "Show widgets on",
+          type: "choice",
+          def: String(Math.max(0, monitors.findIndex((m) => m.primary))),
+          choices: monitors.map((m) => [String(m.index), `Monitor ${m.index + 1}${m.primary ? " (main)" : ""} \u00B7 ${m.width}\u00D7${m.height}`]),
+          when: () => !opt("general", "allMonitors"),
+        }
+      );
+      const saved = opt("general", "allMonitors") ? "all" : opt("general", "monitor");
       if (saved === "all" || (saved !== undefined && !monitors[Number(saved)]?.primary)) await applyMonitor(saved);
     }
   } catch {

@@ -6,6 +6,9 @@
 }
 
 :root {
+  --ink: 255, 255, 255; /* colour of the translucent surfaces on cards (white on dark cards) */
+  --fg: #fff; /* text colour */
+  --paper: #10131f; /* text on "inverse" chips (the light active tiles) */
   --accent: #7aa7ff;
   --wp-w: 1920px; /* wallpaper size after "cover" scaling, set by app.js */
   --wp-h: 1080px;
@@ -26,7 +29,7 @@ body {
   overflow: hidden;
   background: transparent;
   font-family: var(--font, "Inter", system-ui, sans-serif);
-  color: #fff;
+  color: var(--fg);
   user-select: none;
   -webkit-user-select: none;
 }
@@ -85,7 +88,7 @@ body.unlocked .widget.dragging {
 
 .glass {
   width: 340px;
-  border-radius: 36px;
+  border-radius: var(--card-radius, 36px);
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.28),
     0 2px 8px rgba(0, 0, 0, 0.18);
@@ -114,13 +117,13 @@ body.unlocked .widget.dragging {
   border-radius: inherit;
   /* tint + soft top-left light, sits above the backdrop */
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.02) 45%, rgba(255, 255, 255, 0.08)),
+    linear-gradient(135deg, rgba(var(--ink), 0.22), rgba(var(--ink), 0.02) 45%, rgba(var(--ink), 0.08)),
     linear-gradient(rgba(var(--tint, 20, 30, 60), var(--tint-alpha, 0)), rgba(var(--tint, 20, 30, 60), var(--tint-alpha, 0))),
-    rgba(255, 255, 255, 0.06);
+    rgba(var(--ink), 0.06);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 0 28px rgba(255, 255, 255, 0.1);
+    inset 0 1px 0 rgba(var(--ink), 0.55),
+    inset 0 -1px 0 rgba(var(--ink), 0.12),
+    inset 0 0 28px rgba(var(--ink), 0.1);
   pointer-events: none;
   z-index: 1;
 }
@@ -134,10 +137,10 @@ body.unlocked .widget.dragging {
   padding: 1.5px;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.85),
-    rgba(255, 255, 255, 0.05) 35%,
-    rgba(255, 255, 255, 0.05) 65%,
-    rgba(255, 255, 255, 0.45)
+    rgba(var(--ink), 0.85),
+    rgba(var(--ink), 0.05) 35%,
+    rgba(var(--ink), 0.05) 65%,
+    rgba(var(--ink), 0.45)
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -189,7 +192,7 @@ body.unlocked .widget.dragging {
 
 input[type="range"] {
   width: 150px;
-  accent-color: #fff;
+  accent-color: var(--fg);
   cursor: pointer;
 }
 
@@ -199,7 +202,7 @@ input[type="range"] {
   width: 46px;
   height: 28px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(var(--ink), 0.28);
   position: relative;
   cursor: pointer;
   transition: background 0.2s;
@@ -232,10 +235,10 @@ button {
   border-radius: 16px;
   font: inherit;
   font-weight: 600;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.22);
+  color: var(--fg);
+  background: rgba(var(--ink), 0.22);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 1px 0 rgba(var(--ink), 0.5),
     0 2px 6px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition:
@@ -263,7 +266,7 @@ button.danger:hover {
 }
 
 button:hover {
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(var(--ink), 0.32);
 }
 button:active {
   transform: scale(0.97);
@@ -280,7 +283,7 @@ button:active {
   background: rgba(28, 32, 46, 0.95);
   box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    inset 0 0 0 1px rgba(var(--ink), 0.18);
 }
 .ctx button {
   display: block;
@@ -295,7 +298,7 @@ button:active {
   border-radius: 10px;
 }
 .ctx button:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
 }
 
 .hint {
@@ -363,7 +366,7 @@ body.live .live-canvas {
   padding: 6px 12px;
   font-size: 15px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.14);
 }
 .wx-loc .caret {
   opacity: 0.7;
@@ -375,7 +378,7 @@ body.live .live-canvas {
   padding: 5px 0;
   font-size: 17px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.14);
 }
 .wx-now {
   display: flex;
@@ -416,7 +419,7 @@ body.live .live-canvas {
   gap: 6px;
   margin-top: auto;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid rgba(var(--ink), 0.2);
 }
 .wx-day {
   display: flex;
@@ -455,13 +458,13 @@ body.live .live-canvas {
   border-radius: 14px;
   font: inherit;
   font-size: 15px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
+  color: var(--fg);
+  background: rgba(var(--ink), 0.2);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
   user-select: text;
 }
 .wx-search input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--ink), 0.6);
 }
 .wx-search ul {
   flex: 1;
@@ -480,7 +483,7 @@ body.live .live-canvas {
   text-overflow: ellipsis;
 }
 .wx-search li:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(var(--ink), 0.18);
 }
 .wx-search li small {
   opacity: 0.65;
@@ -516,7 +519,7 @@ body.live .live-canvas {
   height: 1px;
   margin: 5px 8px;
   border: 0;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
 }
 
 /* ---------- Settings: scrolling + per-panel options ---------- */
@@ -543,7 +546,7 @@ body.live .live-canvas {
 }
 #settings .scroll::-webkit-scrollbar-thumb {
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(var(--ink), 0.3);
 }
 #settings .btn-row {
   margin-top: 12px;
@@ -560,7 +563,7 @@ body.live .live-canvas {
   margin: 0;
   padding: 0;
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.14);
   box-shadow: none;
 }
 .chev::before {
@@ -577,7 +580,7 @@ body.live .live-canvas {
   display: none;
   margin: 2px 0 8px 28px;
   padding-left: 12px;
-  border-left: 2px solid rgba(255, 255, 255, 0.18);
+  border-left: 2px solid rgba(var(--ink), 0.18);
 }
 .panel-group.open .opts {
   display: block;
@@ -676,10 +679,10 @@ button.choice {
   height: 104px;
   border-radius: 18px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.14);
   box-shadow:
     0 8px 22px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    inset 0 0 0 1px rgba(var(--ink), 0.2);
   transition: width 0.25s;
 }
 .media.wide .m-art {
@@ -724,7 +727,7 @@ button.choice {
   font-weight: 600;
   letter-spacing: 0.02em;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
   box-shadow: none;
   cursor: default;
 }
@@ -781,7 +784,7 @@ button.choice {
   flex: 1;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(var(--ink), 0.25);
   cursor: pointer;
 }
 .m-bar::before {
@@ -798,8 +801,8 @@ button.choice {
   transform: scaleX(0);
   will-change: transform;
   border-radius: inherit;
-  background: #fff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  background: var(--fg);
+  box-shadow: 0 0 8px rgba(var(--ink), 0.5);
 }
 .media.no-progress .m-progress {
   visibility: hidden;
@@ -825,11 +828,11 @@ button.choice {
 .m-btn svg {
   width: 24px;
   height: 24px;
-  fill: #fff;
+  fill: var(--fg);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
 }
 .m-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(var(--ink), 0.18);
 }
 .m-btn:disabled {
   opacity: 0.35;
@@ -838,8 +841,8 @@ button.choice {
 .m-play {
   width: 46px;
   height: 46px;
-  background: rgba(255, 255, 255, 0.24);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  background: rgba(var(--ink), 0.24);
+  box-shadow: inset 0 1px 0 rgba(var(--ink), 0.45);
 }
 .m-play svg {
   width: 28px;
@@ -889,8 +892,8 @@ button.choice {
   display: none;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.13) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.13) 1px, transparent 1px);
+    linear-gradient(to right, rgba(var(--ink), 0.13) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--ink), 0.13) 1px, transparent 1px);
   background-size: var(--grid, 20px) var(--grid, 20px);
 }
 body.show-grid #grid {
@@ -931,7 +934,7 @@ body.show-grid #grid {
   opacity: 0;
   transition: opacity 0.15s;
   background:
-    linear-gradient(135deg, transparent 52%, rgba(255, 255, 255, 0.9) 52% 60%, transparent 60% 72%, rgba(255, 255, 255, 0.9) 72% 80%, transparent 80%);
+    linear-gradient(135deg, transparent 52%, rgba(var(--ink), 0.9) 52% 60%, transparent 60% 72%, rgba(var(--ink), 0.9) 72% 80%, transparent 80%);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 body.can-resize .resize-grip {
@@ -975,8 +978,8 @@ body.can-resize .resize-grip {
   padding: 10px 12px;
   border-radius: 20px;
   text-align: left;
-  background: rgba(255, 255, 255, 0.13);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.13);
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.14);
 }
 .tile .ico {
   display: grid;
@@ -985,11 +988,11 @@ body.can-resize .resize-grip {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
 }
 .tile.on {
-  background: rgba(255, 255, 255, 0.9);
-  color: #10131f;
+  background: rgba(var(--ink), 0.9);
+  color: var(--paper);
   text-shadow: none;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
@@ -1015,10 +1018,10 @@ body.can-resize .resize-grip {
   text-overflow: ellipsis;
 }
 .tile:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--ink), 0.22);
 }
 .tile.on:hover {
-  background: #fff;
+  background: rgb(var(--ink));
 }
 .ico svg,
 .sys-ico svg {
@@ -1052,8 +1055,8 @@ body.can-resize .resize-grip {
   box-shadow: none;
 }
 .sys-power button.on {
-  background: rgba(255, 255, 255, 0.9);
-  color: #10131f;
+  background: rgba(var(--ink), 0.9);
+  color: var(--paper);
   text-shadow: none;
 }
 .sys-sliders {
@@ -1075,7 +1078,7 @@ body.can-resize .resize-grip {
   margin: 0;
   padding: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
   box-shadow: none;
 }
 .sys-ico.off {
@@ -1113,7 +1116,7 @@ body.can-resize .resize-grip {
   flex: 1;
   height: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--ink), 0.22);
   overflow: hidden;
 }
 .sys-battery .bar i {
@@ -1184,11 +1187,11 @@ body.can-resize .resize-grip {
   padding: 9px 12px;
   text-align: left;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: rgba(var(--ink), 0.1);
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.1);
 }
 .hd-row.focused {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.4);
 }
 .hd-row.done {
   background: rgba(91, 227, 125, 0.2);
@@ -1199,7 +1202,7 @@ body.can-resize .resize-grip {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(var(--ink), 0.4);
 }
 .hd-row.working .hd-dot {
   background: #ffb347;
@@ -1271,7 +1274,7 @@ body.can-resize .resize-grip {
 .cl-bar {
   height: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--ink), 0.22);
   overflow: hidden;
 }
 .cl-bar i {
@@ -1332,7 +1335,7 @@ body.can-resize .resize-grip {
   width: 100%;
   min-height: 3px;
   border-radius: 4px 4px 2px 2px;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(var(--ink), 0.55);
 }
 .cl-day.today i {
   background: var(--accent);
@@ -1396,7 +1399,7 @@ body.can-resize .resize-grip {
   font-size: 11.5px;
   font-weight: 650;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
   font-variant-numeric: tabular-nums;
 }
 .pf-row .temp.warm {
@@ -1408,7 +1411,7 @@ body.can-resize .resize-grip {
 .pf-bar {
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--ink), 0.2);
   overflow: hidden;
 }
 .pf-bar i {
@@ -1485,7 +1488,7 @@ body.can-resize .resize-grip {
 }
 .ql-item:hover,
 .ql-add:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
 }
 .ql-item.launched {
   background: rgba(91, 227, 125, 0.3);
@@ -1531,7 +1534,7 @@ body.can-resize .resize-grip {
   display: none;
 }
 .ql-add .ql-ico {
-  border: 2px dashed rgba(255, 255, 255, 0.45);
+  border: 2px dashed rgba(var(--ink), 0.45);
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -1570,13 +1573,13 @@ body.can-resize .resize-grip {
   border-radius: 12px;
   font: inherit;
   font-size: 13px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
+  color: var(--fg);
+  background: rgba(var(--ink), 0.2);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
   user-select: text;
 }
 .ql-add-row input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--ink), 0.6);
 }
 .ql-add-row button {
   width: auto;
@@ -1641,7 +1644,7 @@ body.can-resize .resize-grip {
   padding: 7px 10px 7px 12px;
   text-align: left;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--ink), 0.09);
   box-shadow: inset 3px 0 0 var(--c, var(--accent));
   font: inherit;
   color: inherit;
@@ -1650,13 +1653,13 @@ button.cal-ev {
   cursor: pointer;
 }
 button.cal-ev:hover {
-  background: rgba(255, 255, 255, 0.17);
+  background: rgba(var(--ink), 0.17);
 }
 .cal-ev.past {
   opacity: 0.5;
 }
 .cal-ev.live {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--ink), 0.2);
 }
 .cal-ev .when {
   flex: none;
@@ -1724,7 +1727,7 @@ button.cal-ev:hover {
   margin: 4px 0;
   padding: 6px 8px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--ink), 0.08);
 }
 .cal-src.sub {
   margin-left: 14px;
@@ -1738,7 +1741,7 @@ button.cal-ev:hover {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(var(--ink), 0.4);
 }
 .cal-src .nm {
   min-width: 0;
@@ -1768,7 +1771,7 @@ button.cal-ev:hover {
   padding: 0;
   font-size: 11px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.14);
 }
 .cal-note {
   margin: 4px 6px;
@@ -1789,8 +1792,8 @@ button.cal-ev:hover {
   border-radius: 12px;
   font: inherit;
   font-size: 13px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
+  color: var(--fg);
+  background: rgba(var(--ink), 0.2);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
   user-select: text;
 }
@@ -1798,7 +1801,7 @@ button.cal-ev:hover {
   box-shadow: inset 0 0 0 2px #ff6b5e;
 }
 .cal-add input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--ink), 0.6);
 }
 .cal-add button {
   width: auto;
@@ -1840,7 +1843,7 @@ button.cal-ev:hover {
 }
 .analog .face {
   fill: rgba(10, 14, 28, 0.35);
-  stroke: rgba(255, 255, 255, 0.55);
+  stroke: rgba(var(--ink), 0.55);
   stroke-width: 2;
 }
 .analog.no-face .face {
@@ -1848,7 +1851,7 @@ button.cal-ev:hover {
   stroke: none;
 }
 .analog .mark {
-  stroke: rgba(255, 255, 255, 0.8);
+  stroke: rgba(var(--ink), 0.8);
   stroke-linecap: round;
 }
 .analog .num {
@@ -1941,7 +1944,7 @@ body.all-hidden .guide {
 }
 .nt-list::-webkit-scrollbar-thumb {
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(var(--ink), 0.3);
 }
 .nt-task {
   display: flex;
@@ -1949,7 +1952,7 @@ body.all-hidden .guide {
   gap: 10px;
   padding: 7px 10px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--ink), 0.09);
 }
 .nt-task.done .nt-text {
   text-decoration: line-through;
@@ -1971,7 +1974,7 @@ body.all-hidden .guide {
   height: 18px;
   margin: 0;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.6);
+  border: 2px solid rgba(var(--ink), 0.6);
   cursor: pointer;
 }
 .nt-check:checked {
@@ -2015,14 +2018,14 @@ body.all-hidden .guide {
   border-radius: 12px;
   font: inherit;
   font-size: 13px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
+  color: var(--fg);
+  background: rgba(var(--ink), 0.2);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
   user-select: text;
 }
 .nt-add input::placeholder,
 .profile-add input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--ink), 0.6);
 }
 .nt-add button,
 .profile-add button {
@@ -2043,8 +2046,8 @@ body.all-hidden .guide {
   font: inherit;
   font-size: 13.5px;
   line-height: 1.45;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--fg);
+  background: rgba(var(--ink), 0.12);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
   user-select: text;
 }
@@ -2079,8 +2082,8 @@ body.all-hidden .guide {
   box-shadow: none;
 }
 .tm-tab.on {
-  background: rgba(255, 255, 255, 0.88);
-  color: #10131f;
+  background: rgba(var(--ink), 0.88);
+  color: var(--paper);
   text-shadow: none;
 }
 .tm-ring {
@@ -2100,7 +2103,7 @@ body.all-hidden .guide {
   stroke-linecap: round;
 }
 .tm-ring-bg {
-  stroke: rgba(255, 255, 255, 0.18);
+  stroke: rgba(var(--ink), 0.18);
 }
 .tm-ring-fill {
   stroke: var(--accent);
@@ -2140,8 +2143,8 @@ body.all-hidden .guide {
 }
 .tm-controls .primary {
   flex: 1.4;
-  background: rgba(255, 255, 255, 0.88);
-  color: #10131f;
+  background: rgba(var(--ink), 0.88);
+  color: var(--paper);
   text-shadow: none;
 }
 .tm-count {
@@ -2196,7 +2199,7 @@ body.all-hidden .guide {
 }
 .cb-list::-webkit-scrollbar-thumb {
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(var(--ink), 0.3);
 }
 .cb-item {
   display: flex;
@@ -2207,12 +2210,12 @@ body.all-hidden .guide {
   padding: 7px 10px;
   text-align: left;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--ink), 0.09);
   box-shadow: none;
   font-weight: 450;
 }
 .cb-item:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(var(--ink), 0.18);
 }
 .cb-item.copied {
   background: rgba(91, 227, 125, 0.35);
@@ -2261,7 +2264,7 @@ body.all-hidden .guide {
   margin: 4px 0;
   padding: 6px 8px 6px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--ink), 0.08);
 }
 .profile-row b {
   flex: 1;
@@ -2282,4 +2285,102 @@ body.all-hidden .guide {
 .profile-row .rm {
   padding: 4px 8px;
   background: transparent;
+}
+
+/* ---------- Visual styles (Settings -> Appearance -> Style) ---------- */
+
+/* things that sit on the wallpaper, not on a card, always stay white */
+#grid,
+.guide,
+.clock,
+.ctx {
+  --ink: 255, 255, 255;
+  --fg: #fff;
+  --paper: #10131f;
+}
+
+/* every style except liquid glass: no wallpaper copy, no light rim, flat card */
+body:not([data-style="glass"]) .glass-bg,
+body:not([data-style="glass"]) .glass::after {
+  display: none;
+}
+body:not([data-style="glass"]) .glass::before {
+  background: var(--card-bg);
+  box-shadow: var(--card-ring, none);
+}
+body:not([data-style="glass"]) .glass {
+  box-shadow: var(--card-shadow, 0 12px 30px rgba(0, 0, 0, 0.35));
+}
+body:not([data-style="glass"]) .glass-content {
+  text-shadow: none;
+}
+
+/* Solid: flat dark cards (the colour theme tints them) */
+body[data-style="solid"] {
+  --card-radius: 22px;
+  --card-bg: color-mix(in srgb, rgb(var(--tint, 20, 30, 60)) 26%, #13151e);
+  --card-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Paper: light cards with dark text */
+body[data-style="paper"] {
+  --card-radius: 20px;
+  --card-bg: #f3f4f8;
+  --card-ring: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --card-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --ink: 20, 24, 40;
+  --fg: #171b29;
+  --paper: #f3f4f8;
+}
+body[data-style="paper"] .tile.on .ico {
+  color: #fff;
+}
+
+/* Neon: near-black cards with a glowing accent outline */
+body[data-style="neon"] {
+  --card-radius: 14px;
+  --card-bg: #0a0c15;
+  --card-ring: inset 0 0 0 1.5px var(--accent);
+  --card-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent), 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+body[data-style="neon"] .glass-content h2,
+body[data-style="neon"] .hd-head b,
+body[data-style="neon"] .cl-head b,
+body[data-style="neon"] .nt-head b,
+body[data-style="neon"] .pf-head b,
+body[data-style="neon"] .cal-head b,
+body[data-style="neon"] .ql-head b,
+body[data-style="neon"] .cb-head b {
+  color: var(--accent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+/* Terminal: black, monospace, green phosphor */
+body[data-style="terminal"] {
+  --card-radius: 4px;
+  --card-bg: #040804;
+  --card-ring: inset 0 0 0 1px rgba(57, 255, 122, 0.65);
+  --card-shadow: 0 0 14px rgba(57, 255, 122, 0.25), 0 10px 26px rgba(0, 0, 0, 0.5);
+  --accent: #39ff7a;
+  --fg: #b9ffd0;
+}
+body[data-style="terminal"] .glass-content {
+  text-shadow: 0 0 6px rgba(57, 255, 122, 0.45);
+}
+body[data-style="terminal"] button,
+body[data-style="terminal"] .tile,
+body[data-style="terminal"] .nt-task,
+body[data-style="terminal"] .cal-ev,
+body[data-style="terminal"] .hd-row {
+  border-radius: 3px;
+}
+
+/* Minimal: no cards at all, only text and shadows on the wallpaper */
+body[data-style="minimal"] {
+  --card-radius: 18px;
+  --card-bg: transparent;
+  --card-shadow: none;
+}
+body[data-style="minimal"] .glass-content {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), 0 2px 12px rgba(0, 0, 0, 0.55);
 }

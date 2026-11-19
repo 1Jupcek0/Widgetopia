@@ -26,8 +26,8 @@ window per widget.
 - Layout tools (Settings -> Layout): grid overlay, snap to grid / screen centre / edges / other panels with alignment guides, proportional resizing with a corner grip (double-click resets), optionally allowed while locked
 - Notes panel (to-do list or free note), Timer panel (Pomodoro, countdown, stopwatch, with notification and sound) and Clipboard history (opt-in, memory only, ignores password-manager copies)
 - Calendar reminders as Windows notifications (minutes before an event are selectable)
-- Themes (accent colour, glass tint, font) and layout profiles (save / apply which panels are on, where they are and how big)
-- Start with Windows, and a choice of monitor for the widgets (one monitor or one wide overlay over all of them)
+- Visual styles besides liquid glass: Solid, Paper (light), Neon, Terminal and Minimal (no cards), combined with colour themes (accent, glass tint) and a font choice and layout profiles (save / apply which panels are on, where they are and how big)
+- Start with Windows, and a choice of monitor for the widgets (one monitor, or one checkbox for a wide overlay over all of them)
 - Global shortcut (default Ctrl + Alt + W, changeable or off in Settings -> Layout) hides / shows all widgets; options that do not apply (e.g. analog dial in digital mode) are greyed out
 - Settings lists every panel with an on/off switch
 - Right click on a widget: *Reload*, *Settings*, *Lock / Unlock* (the tray icon has the same Reload / Settings). Settings holds everything else (glass blur/refraction, quit)
@@ -81,6 +81,10 @@ Token statistics are read from Claude Code's transcripts in `~/.claude/projects`
 ```powershell
 try { if ($o.rate_limits) { [pscustomobject]@{ updated = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds(); rate_limits = $o.rate_limits } | ConvertTo-Json -Depth 6 -Compress | Set-Content -Path (Join-Path $env:USERPROFILE ".claude\widgetopia-usage.json") -Encoding utf8 } } catch {}
 ```
+
+## Testing without touching your own layout
+
+The debug and release builds share one WebView2 profile. To test safely, build a copy with its own identifier and target folder: `$env:TAURI_CONFIG='{"identifier":"dev.widgetopia.test"}'; $env:CARGO_TARGET_DIR="src-tauri\target-test"; cargo build` (in `src-tauri`).
 
 ## Tests
 
